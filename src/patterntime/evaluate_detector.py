@@ -6,60 +6,65 @@ import pandas as pd
 from detect_changes import detect_changes, group_detections
 
 
-def main():
-    project_root = Path(__file__).resolve().parents[2]
-    data_path = project_root / "data" / "sample_api_metrics.csv"
-
+def evaluate_dataset(data_path: Path, dataset_name: str):
     df = pd.read_csv(data_path, parse_dates=["timestamp"])
 
     metric = "response_time_ms"
-    window_size = 12
-    threshold = 100
 
-    # Run the detector and group nearby candidates.
     detections = detect_changes(
         df[metric],
-        window_size=window_size,
-        threshold=threshold,
+        window_size=12,
+        threshold=100,
     )
     events = group_detections(detections, max_gap=1)
 
-    # The synthetic dataset tells us where the change was introduced.
-    true_change_index = int(
-        df.index[df["is_after_change"] == 1][0]
-    )
+    has_known_change = (df["is_after_change"] == 1).any()
 
-    print("PATTERNTIME — DETECTOR EVALUATION")
+    print(f"\n{dataset_name}")
     print("-" * 40)
-    print(f"Metric: {metric}")
-    print(f"Known change index: {true_change_index}")
-    print(f"Known change time: {df.iloc[true_change_index]['timestamp']}")
+    print(f"Observations: {len(df)}")
+    print(f"Known change exists: {has_known_change}")
     print(f"Candidate detections: {len(detections)}")
     print(f"Grouped events: {len(events)}")
 
-    if not events:
-        print("Result: No change detected.")
-        return
+    if has_known_change:
+        true_index = int(df.index[df["is_after_change"] == 1][0])
 
-    # Select the strongest grouped event for this first experiment.
-    strongest_event = max(
-        events,
-        key=lambda event: abs(event["difference"]),
+        if events:
+            strongest_event = max(
+                events,
+                key=lambda event: abs(event["difference"]),
+            )
+            detected_index = strongest_event["index"]
+            error = detected_index - true_index
+
+            print(f"Known change index: {true_index}")
+            print(f"Detected index: {detected_index}")
+            print(f"Detection error: {error * 5} minutes")
+        else:
+            print("The detector missed the known change.")
+    else:
+        print(f"False alarms: {len(events)}")
+
+        if events:
+            print("The detector reported a change despite no known change.")
+        else:
+            print("No false alarms in this dataset.")
+
+
+def main():
+    project_root = Path(__file__).resolve().parents[2]
+    data_dir = project_root / "data"
+
+    evaluate_dataset(
+        data_dir / "sample_api_metrics.csv",
+        "Dataset 1: Injected Change",
     )
 
-    detected_index = strongest_event["index"]
-    error_points = detected_index - true_change_index
-    error_minutes = error_points * 5
-
-    print(f"Detected index: {detected_index}")
-    print(f"Detected time: {df.iloc[detected_index]['timestamp']}")
-    print(f"Detection error: {error_points} observations")
-    print(f"Detection error in time: {error_minutes} minutes")
-
-    if error_points == 0:
-        print("Result: Exact match with the known change.")
-    else:
-        print("Result: Detection differs from the known change.")
+    evaluate_dataset(
+        data_dir / "no_change_metrics.csv",
+        "Dataset 2: No Change",
+    )
 
 
 if __name__ == "__main__":
