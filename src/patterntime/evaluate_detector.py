@@ -52,20 +52,28 @@ def evaluate_dataset(data_path: Path, dataset_name: str):
             print("No false alarms in this dataset.")
 
 
+
 def main():
     project_root = Path(__file__).resolve().parents[2]
     data_dir = project_root / "data"
 
     evaluate_dataset(
         data_dir / "sample_api_metrics.csv",
-        "Dataset 1: Injected Change",
+        "Original Dataset: Injected Change",
     )
 
     evaluate_dataset(
         data_dir / "no_change_metrics.csv",
-        "Dataset 2: No Change",
+        "No-Change Dataset",
     )
+
+    for change_size in [30, 70, 150]:
+        evaluate_dataset(
+            data_dir / f"change_size_{change_size}ms.csv",
+            f"Change-Size Experiment: +{change_size} ms",
+        )
 
 
 if __name__ == "__main__":
     main()
+
