@@ -1,0 +1,23 @@
+{
+  "name": "patterntime",
+  "version": "1.0.0",
+  "description": "PatternTime",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/falgunisardhara/patterntime.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/falgunisardhara/patterntime/issues"
+  },
+  "homepage": "https://github.com/falgunisardhara/patterntime#readme",
+  "dependencies": {
+    "echarts": "^6.1.0"
+  }
+}
