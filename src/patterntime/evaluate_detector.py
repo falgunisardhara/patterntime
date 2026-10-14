@@ -4,16 +4,22 @@ from pathlib import Path
 import pandas as pd
 
 from detect_changes import detect_changes, group_detections
+from detect_cusum import detect_cusum
 
 
-THRESHOLDS = [50, 75, 100]
 WINDOW_SIZE = 12
-MATCH_TOLERANCE = 2  # observations; each observation is 5 minutes
+SLIDING_THRESHOLD = 50.0
+
+CUSUM_BASELINE_WINDOW = 20
+CUSUM_DRIFT = 0.5
+CUSUM_THRESHOLD = 10.0
+
+MATCH_TOLERANCE = 2
+MINUTES_PER_OBSERVATION = 5
 
 
 def get_known_change_indices(df: pd.DataFrame) -> list[int]:
-    """Find indices where the ground-truth label changes."""
-
+    """Return indices where the ground-truth label changes."""
     labels = df["is_after_change"].astype(int)
 
     return [
@@ -29,7 +35,6 @@ def match_events(
     tolerance: int,
 ) -> tuple[list[tuple[int, int]], list[int], list[int]]:
     """Match detected events to true changes in chronological order."""
-
     detected = sorted(detected_indices)
     actual = sorted(true_indices)
 
@@ -67,7 +72,6 @@ def calculate_metrics(
     true_change_count: int,
 ) -> dict:
     """Calculate event-level detection metrics."""
-
     tp = len(matches)
     fp = len(false_positives)
     fn = len(false_negatives)
@@ -75,24 +79,18 @@ def calculate_metrics(
     precision = tp / (tp + fp) if tp + fp > 0 else None
     recall = tp / true_change_count if true_change_count > 0 else None
 
-    f1_denominator = (2 * tp) + fp + fn
-    f1 = (2 * tp / f1_denominator) if f1_denominator > 0 else None
+    f1_denominator = 2 * tp + fp + fn
+    f1 = 2 * tp / f1_denominator if f1_denominator > 0 else None
 
-    errors = [
-        detected - actual
-        for actual, detected in matches
-    ]
+    errors = [detected - actual for actual, detected in matches]
 
     mean_absolute_error = (
         sum(abs(error) for error in errors) / len(errors)
-        if errors
-        else None
+        if errors else None
     )
-
     mean_signed_error = (
         sum(errors) / len(errors)
-        if errors
-        else None
+        if errors else None
     )
 
     return {
@@ -103,44 +101,51 @@ def calculate_metrics(
         "recall": recall,
         "f1": f1,
         "mean_absolute_error_minutes": (
-            mean_absolute_error * 5
-            if mean_absolute_error is not None
-            else None
+            mean_absolute_error * MINUTES_PER_OBSERVATION
+            if mean_absolute_error is not None else None
         ),
         "mean_signed_error_minutes": (
-            mean_signed_error * 5
-            if mean_signed_error is not None
-            else None
+            mean_signed_error * MINUTES_PER_OBSERVATION
+            if mean_signed_error is not None else None
         ),
     }
 
 
 def format_metric(value) -> str:
-    """Format a metric or show N/A when it is undefined."""
-
+    """Format a metric, displaying N/A when undefined."""
     return f"{value:.2f}" if value is not None else "N/A"
 
 
-def evaluate_dataset(
-    data_path: Path,
-    dataset_name: str,
-    threshold: float,
+def evaluate_algorithm(
+    df: pd.DataFrame,
+    algorithm: str,
+    true_indices: list[int],
 ) -> dict:
-    """Run the detector and evaluate its grouped events."""
+    """Run one detector and evaluate its grouped or reported events."""
+    values = df["response_time_ms"]
 
-    df = pd.read_csv(data_path, parse_dates=["timestamp"])
-    metric = "response_time_ms"
+    if algorithm == "Sliding Window":
+        candidates = detect_changes(
+            values,
+            window_size=WINDOW_SIZE,
+            threshold=SLIDING_THRESHOLD,
+        )
+        events = group_detections(candidates, max_gap=1)
+        detected_indices = [event["index"] for event in events]
+        candidate_count = len(candidates)
 
-    detections = detect_changes(
-        df[metric],
-        window_size=WINDOW_SIZE,
-        threshold=threshold,
-    )
+    elif algorithm == "CUSUM":
+        events = detect_cusum(
+            values,
+            baseline_window=CUSUM_BASELINE_WINDOW,
+            drift=CUSUM_DRIFT,
+            threshold=CUSUM_THRESHOLD,
+        )
+        detected_indices = [event["index"] for event in events]
+        candidate_count = len(events)
 
-    events = group_detections(detections, max_gap=1)
-
-    true_indices = get_known_change_indices(df)
-    detected_indices = [event["index"] for event in events]
+    else:
+        raise ValueError(f"Unknown algorithm: {algorithm}")
 
     matches, false_positives, false_negatives = match_events(
         detected_indices,
@@ -155,34 +160,12 @@ def evaluate_dataset(
         len(true_indices),
     )
 
-    print(f"\n{dataset_name}")
-    print("-" * 45)
-    print(f"Threshold: {threshold} ms")
-    print(f"Observations: {len(df)}")
-    print(f"Known changes: {len(true_indices)}")
-    print(f"Candidate detections: {len(detections)}")
-    print(f"Grouped events: {len(events)}")
-    print(f"Matching tolerance: {MATCH_TOLERANCE * 5} minutes")
-    print(f"True positives (TP): {metrics['true_positives']}")
-    print(f"False positives (FP): {metrics['false_positives']}")
-    print(f"False negatives (FN): {metrics['false_negatives']}")
-    print(f"Precision: {format_metric(metrics['precision'])}")
-    print(f"Recall: {format_metric(metrics['recall'])}")
-    print(f"F1 score: {format_metric(metrics['f1'])}")
-
-    if metrics["mean_absolute_error_minutes"] is not None:
-        print(
-            "Mean absolute timing error: "
-            f"{metrics['mean_absolute_error_minutes']:.2f} minutes"
-        )
-        print(
-            "Mean signed timing error: "
-            f"{metrics['mean_signed_error_minutes']:.2f} minutes"
-        )
-    else:
-        print("Timing error: N/A (no matched events)")
-
-    return metrics
+    return {
+        "algorithm": algorithm,
+        "candidate_count": candidate_count,
+        "detected_indices": detected_indices,
+        **metrics,
+    }
 
 
 def main():
@@ -197,17 +180,74 @@ def main():
         ("Large Change (+150 ms)", "change_size_150ms.csv"),
     ]
 
-    for threshold in THRESHOLDS:
-        print("\n" + "=" * 55)
-        print(f"EVALUATING THRESHOLD: {threshold} ms")
-        print("=" * 55)
+    all_results = []
 
-        for dataset_name, filename in datasets:
-            evaluate_dataset(
-                data_dir / filename,
-                dataset_name,
-                threshold,
+    print("=" * 100)
+    print("PATTERNTIME: SLIDING-WINDOW VS CUSUM")
+    print("=" * 100)
+    print(f"Sliding window: size={WINDOW_SIZE}, threshold={SLIDING_THRESHOLD} ms")
+    print(
+        f"CUSUM: baseline={CUSUM_BASELINE_WINDOW}, "
+        f"drift={CUSUM_DRIFT}, threshold={CUSUM_THRESHOLD}"
+    )
+    print(
+        f"Event matching tolerance: {MATCH_TOLERANCE} observations "
+        f"({MATCH_TOLERANCE * MINUTES_PER_OBSERVATION} minutes)"
+    )
+
+    for dataset_name, filename in datasets:
+        df = pd.read_csv(data_dir / filename, parse_dates=["timestamp"])
+        true_indices = get_known_change_indices(df)
+
+        print(f"\n{'-' * 100}")
+        print(f"{dataset_name} | Known change indices: {true_indices}")
+        print("-" * 100)
+
+        for algorithm in ["Sliding Window", "CUSUM"]:
+            result = evaluate_algorithm(df, algorithm, true_indices)
+            result["dataset"] = dataset_name
+            all_results.append(result)
+
+            print(f"\n{algorithm}")
+            print(f"  Detected indices: {result['detected_indices']}")
+            print(f"  Candidate detections: {result['candidate_count']}")
+            print(
+                f"  TP: {result['true_positives']} | "
+                f"FP: {result['false_positives']} | "
+                f"FN: {result['false_negatives']}"
             )
+            print(
+                f"  Precision: {format_metric(result['precision'])} | "
+                f"Recall: {format_metric(result['recall'])} | "
+                f"F1: {format_metric(result['f1'])}"
+            )
+            print(
+                "  Mean absolute localization error: "
+                f"{format_metric(result['mean_absolute_error_minutes'])} minutes"
+            )
+            print(
+                "  Mean signed localization error: "
+                f"{format_metric(result['mean_signed_error_minutes'])} minutes"
+            )
+
+    print(f"\n{'=' * 100}")
+    print("COMPARISON SUMMARY")
+    print("=" * 100)
+
+    summary = pd.DataFrame(all_results)
+    columns = [
+        "dataset",
+        "algorithm",
+        "true_positives",
+        "false_positives",
+        "false_negatives",
+        "precision",
+        "recall",
+        "f1",
+        "mean_absolute_error_minutes",
+    ]
+
+    print(summary[columns].to_string(index=False))
 
 
 if __name__ == "__main__":
