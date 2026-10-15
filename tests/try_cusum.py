@@ -13,6 +13,7 @@ from detect_cusum import detect_cusum
 data_dir = PROJECT_ROOT / "data"
 
 datasets = [
+    ("Original Dataset", "sample_api_metrics.csv"),
     ("No change", "no_change_metrics.csv"),
     ("Small change (+30 ms)", "change_size_30ms.csv"),
     ("Medium change (+70 ms)", "change_size_70ms.csv"),
