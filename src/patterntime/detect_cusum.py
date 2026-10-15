@@ -9,6 +9,7 @@ def detect_cusum(
     baseline_window: int = 20,
     drift: float = 0.5,
     threshold: float = 5.0,
+    clip_z_score: float | None = None,
 ) -> list[dict]:
     """
     Detect upward and downward shifts using standardized CUSUM.
@@ -17,13 +18,19 @@ def detect_cusum(
     observations to establish a new baseline before continuing.
     The detection index represents when the shift was detected,
     not necessarily the exact point where the shift began.
+
+    clip_z_score: Optional maximum absolute Z-score allowed per step.
+    Clamping Z-scores (Robust CUSUM / Winsorization) prevents isolated
+    extreme outliers (spikes) from triggering false alarms in a single step.
     """
-    if baseline_window < 2: # Estimates the normal mean and standard deviation
+    if baseline_window < 2:  # Estimates the normal mean and standard deviation
         raise ValueError("baseline_window must be at least 2.")
-    if drift < 0:   # Controls how much standardized deviation is tolerated before evidence accumulates
+    if drift < 0:  # Controls how much standardized deviation is tolerated before evidence accumulates
         raise ValueError("drift cannot be negative.")
     if threshold <= 0:  # Determines how much accumulated evidence triggers a detection
         raise ValueError("threshold must be greater than zero.")
+    if clip_z_score is not None and clip_z_score <= 0:
+        raise ValueError("clip_z_score must be greater than zero.")
     if values.isna().any():
         raise ValueError("Input values must not contain missing values.")
 
@@ -48,8 +55,12 @@ def detect_cusum(
         value = float(values.iloc[index])
         z_score = (value - baseline_mean) / baseline_std
 
-        positive_sum = max(0.0, positive_sum + z_score - drift)
-        negative_sum = min(0.0, negative_sum + z_score + drift)
+        effective_z = z_score
+        if clip_z_score is not None:
+            effective_z = max(-clip_z_score, min(clip_z_score, z_score))
+
+        positive_sum = max(0.0, positive_sum + effective_z - drift)
+        negative_sum = min(0.0, negative_sum + effective_z + drift)
 
         direction = None
 

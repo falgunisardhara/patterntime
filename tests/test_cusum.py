@@ -70,3 +70,38 @@ def test_cusum_rejects_missing_values():
 
     with pytest.raises(ValueError, match="missing values"):
         detect_cusum(values, baseline_window=2)
+
+
+def test_cusum_rejects_invalid_clip_z_score():
+    values = pd.Series([10, 11, 9, 10, 11, 12])
+
+    with pytest.raises(ValueError, match="clip_z_score"):
+        detect_cusum(values, baseline_window=2, clip_z_score=0)
+
+    with pytest.raises(ValueError, match="clip_z_score"):
+        detect_cusum(values, baseline_window=2, clip_z_score=-2.5)
+
+
+def test_robust_cusum_suppresses_transient_spikes():
+    df = load_dataset("scenario_transient_spikes.csv")
+
+    # Standard CUSUM without clipping is fooled by isolated spikes
+    standard_detections = detect_cusum(
+        df["response_time_ms"],
+        baseline_window=20,
+        drift=0.5,
+        threshold=10.0,
+        clip_z_score=None,
+    )
+    assert len(standard_detections) == 2
+
+    # Robust CUSUM with Z-clamping ignores isolated spikes
+    robust_detections = detect_cusum(
+        df["response_time_ms"],
+        baseline_window=20,
+        drift=0.5,
+        threshold=10.0,
+        clip_z_score=4.0,
+    )
+    assert robust_detections == []
+

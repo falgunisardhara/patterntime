@@ -144,6 +144,17 @@ def evaluate_algorithm(
         detected_indices = [event["index"] for event in events]
         candidate_count = len(events)
 
+    elif algorithm == "Robust CUSUM":
+        events = detect_cusum(
+            values,
+            baseline_window=CUSUM_BASELINE_WINDOW,
+            drift=CUSUM_DRIFT,
+            threshold=CUSUM_THRESHOLD,
+            clip_z_score=4.0,
+        )
+        detected_indices = [event["index"] for event in events]
+        candidate_count = len(events)
+
     else:
         raise ValueError(f"Unknown algorithm: {algorithm}")
 
@@ -178,6 +189,9 @@ def main():
         ("Small Change (+30 ms)", "change_size_30ms.csv"),
         ("Medium Change (+70 ms)", "change_size_70ms.csv"),
         ("Large Change (+150 ms)", "change_size_150ms.csv"),
+        ("High Noise (+70 ms shift)", "scenario_high_noise.csv"),
+        ("Transient Spikes (No shift)", "scenario_transient_spikes.csv"),
+        ("Gradual Drift (Memory Leak)", "scenario_gradual_drift.csv"),
     ]
 
     all_results = []
@@ -203,7 +217,7 @@ def main():
         print(f"{dataset_name} | Known change indices: {true_indices}")
         print("-" * 100)
 
-        for algorithm in ["Sliding Window", "CUSUM"]:
+        for algorithm in ["Sliding Window", "CUSUM", "Robust CUSUM"]:
             result = evaluate_algorithm(df, algorithm, true_indices)
             result["dataset"] = dataset_name
             all_results.append(result)
