@@ -155,6 +155,19 @@ def evaluate_algorithm(
         detected_indices = [event["index"] for event in events]
         candidate_count = len(events)
 
+    elif algorithm == "EWMA":
+        from patterntime.detectors import EWMADetector
+
+        ewma_detector = EWMADetector(
+            baseline_window=CUSUM_BASELINE_WINDOW,
+            lambda_=0.2,
+            control_limit=3.0,
+            clip_z_score=4.0,
+        )
+        res = ewma_detector.detect(values)
+        detected_indices = res.indices
+        candidate_count = res.count
+
     else:
         raise ValueError(f"Unknown algorithm: {algorithm}")
 
@@ -217,7 +230,7 @@ def main():
         print(f"{dataset_name} | Known change indices: {true_indices}")
         print("-" * 100)
 
-        for algorithm in ["Sliding Window", "CUSUM", "Robust CUSUM"]:
+        for algorithm in ["Sliding Window", "CUSUM", "Robust CUSUM", "EWMA"]:
             result = evaluate_algorithm(df, algorithm, true_indices)
             result["dataset"] = dataset_name
             all_results.append(result)
