@@ -1,69 +1,438 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PatternTime | Time-Series Explorer</title>
-
+    <title>PatternTime | Interactive Time-Series Investigation Laboratory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Primary local ECharts & PapaParse with CDN fallback -->
     <script src="../node_modules/echarts/dist/echarts.min.js"></script>
+    <script>
+        if (typeof echarts === "undefined") {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"><\/script>');
+        }
+    </script>
+    <script src="../node_modules/papaparse/papaparse.min.js"></script>
+    <script>
+        if (typeof Papa === "undefined") {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"><\/script>');
+        }
+    </script>
 
     <style>
+        :root {
+            --bg-base: #090d16;
+            --bg-card: #0f172a;
+            --bg-card-hover: #131e36;
+            --bg-input: #1e293b;
+            --border-color: #1e293b;
+            --border-highlight: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-subtle: #64748b;
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.25);
+            --cyan: #06b6d4;
+            --emerald: #10b981;
+            --amber: #f59e0b;
+            --rose: #f43f5e;
+            --radius-lg: 16px;
+            --radius-md: 10px;
+            --radius-sm: 6px;
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
         * {
             box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
         body {
-            margin: 0;
-            padding: 32px;
-            background: #f4f7fb;
-            color: #172033;
-            font-family: Arial, sans-serif;
-        }
-
-        .dashboard {
-            max-width: 1100px;
-            margin: 0 auto;
-        }
-
-        .header {
-            margin-bottom: 24px;
-        }
-
-        .header h1 {
-            margin-bottom: 8px;
-        }
-
-        .header p {
-            color: #64748b;
-        }
-
-        .panel {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
             padding: 24px;
-            background: white;
-            border-radius: 14px;
-            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
         }
 
-        .controls {
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Header Navigation */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 24px;
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--cyan) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        .brand-icon svg {
+            width: 22px;
+            height: 22px;
+            fill: white;
+        }
+
+        .brand-title h1 {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            background: linear-gradient(to right, #ffffff, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-title p {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .header-meta {
             display: flex;
             align-items: center;
             gap: 12px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
         }
 
-        select {
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-live {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--emerald);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-live::before {
+            content: "";
+            width: 7px;
+            height: 7px;
+            background: var(--emerald);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--emerald);
+        }
+
+        /* Main Workspace Grid */
+        .workspace {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 1080px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Controls Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+        }
+
+        .panel-title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 14px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .label-val {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--cyan);
+            font-weight: 600;
+        }
+
+        select, input[type="text"], input[type="number"] {
+            width: 100%;
             padding: 10px 14px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            background: white;
-            font-size: 15px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            outline: none;
+            transition: var(--transition);
         }
 
-        #status {
-            color: #64748b;
-            font-size: 14px;
+        select:focus, input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        /* Range Slider */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: var(--bg-input);
+            border-radius: 9999px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--primary-glow);
+            transition: var(--transition);
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+            background: #818cf8;
+        }
+
+        /* Custom File Upload */
+        .upload-dropzone {
+            border: 2px dashed var(--border-highlight);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            background: rgba(30, 41, 59, 0.3);
+        }
+
+        .upload-dropzone:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .upload-dropzone svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .upload-dropzone p {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .upload-dropzone span {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Algorithm Tab Switcher */
+        .algo-tabs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            background: var(--bg-input);
+            padding: 4px;
+            border-radius: var(--radius-md);
+            margin-bottom: 14px;
+        }
+
+        .algo-tab {
+            padding: 8px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .algo-tab.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 2px 8px var(--primary-glow);
+        }
+
+        /* Toggle switches */
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 38px;
+            height: 22px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--bg-input);
+            transition: var(--transition);
+            border-radius: 9999px;
+            border: 1px solid var(--border-color);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-muted);
+            transition: var(--transition);
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(16px);
+            background-color: white;
+        }
+
+        /* Main Chart Area */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .chart-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            position: relative;
+        }
+
+        .chart-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .chart-title h2 {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .chart-title p {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .chart-legend {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
         }
 
         #chart {
@@ -71,238 +440,1222 @@
             height: 480px;
         }
 
-        .note {
-            margin-top: 16px;
-            color: #64748b;
-            font-size: 13px;
+        /* Impact Analysis Section */
+        .impact-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.8) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+            transition: var(--transition);
         }
 
-        @media (max-width: 600px) {
-            body {
-                padding: 16px;
-            }
+        .impact-card.severity-critical {
+            border-color: rgba(244, 63, 94, 0.4);
+            box-shadow: 0 0 25px rgba(244, 63, 94, 0.1);
+        }
 
-            .panel {
-                padding: 14px;
-            }
+        .impact-card.severity-high {
+            border-color: rgba(245, 158, 11, 0.4);
+            box-shadow: 0 0 25px rgba(245, 158, 11, 0.1);
+        }
 
-            #chart {
-                height: 380px;
-            }
+        .impact-card.severity-medium {
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        .impact-card.severity-low, .impact-card.severity-negligible {
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+
+        .impact-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .impact-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .severity-pill {
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .pill-critical {
+            background: rgba(244, 63, 94, 0.15);
+            color: var(--rose);
+            border: 1px solid rgba(244, 63, 94, 0.35);
+        }
+
+        .pill-high {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--amber);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+        }
+
+        .pill-medium {
+            background: rgba(99, 102, 241, 0.15);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.35);
+        }
+
+        .pill-low, .pill-negligible {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--emerald);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+        }
+
+        .impact-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 16px;
+        }
+
+        .kpi-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-subtle);
+            margin-bottom: 6px;
+        }
+
+        .kpi-value {
+            font-size: 22px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-main);
+        }
+
+        .kpi-sub {
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .val-up {
+            color: var(--rose);
+        }
+
+        .val-down {
+            color: var(--emerald);
+        }
+
+        .val-neutral {
+            color: var(--text-muted);
+        }
+
+        /* Comparison Table */
+        .stats-table-wrapper {
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(30, 41, 59, 0.5);
+            padding: 12px 16px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .narrative-box {
+            margin-top: 16px;
+            padding: 14px 18px;
+            background: rgba(30, 41, 59, 0.4);
+            border-left: 4px solid var(--primary);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .narrative-box strong {
+            color: var(--text-main);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 36px 20px;
+            color: var(--text-subtle);
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            fill: var(--text-subtle);
+            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
-    <main class="dashboard">
+    <div class="container">
+        <!-- Header -->
         <header class="header">
-            <h1>PatternTime</h1>
-            <p>Explore metrics over time and investigate significant changes.</p>
-        </header>
-
-        <section class="panel">
-            <div class="controls">
-                <label for="metric">Select metric:</label>
-
-                <select id="metric">
-                    <option value="response_time_ms">Response Time (ms)</option>
-                    <option value="failed_requests">Failed Requests</option>
-                    <option value="requests_per_minute">Requests per Minute</option>
-                </select>
-
-                <span id="status">Loading dataset...</span>
+            <div class="brand">
+                <div class="brand-icon">
+                    <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm4 4h2v-6H7v6zm4 4h2V7h-2v14zm4-8h2V3h-2v10zm4 4h2v-4h-2v4z"/></svg>
+                </div>
+                <div class="brand-title">
+                    <h1>PatternTime</h1>
+                    <p>Interactive AI/ML Time-Series Investigation Laboratory</p>
+                </div>
             </div>
 
-            <div id="chart"></div>
+            <div class="header-meta">
+                <span class="badge badge-live" id="status-badge">Engine Ready</span>
+            </div>
+        </header>
 
-            <p class="note">
-                The dashed line marks the known change deliberately
-                introduced into this simulated dataset. It is a reference
-                point, not an AI detection result.
-            </p>
-        </section>
-    </main>
+        <!-- Main Workspace -->
+        <div class="workspace">
+            <!-- Sidebar Controls -->
+            <aside class="sidebar">
+                <!-- Dataset Selector -->
+                <section class="panel">
+                    <div class="panel-title">
+                        <span>1. Data Source</span>
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                    </div>
 
+                    <div class="form-group">
+                        <label for="dataset-select">Benchmark Dataset</label>
+                        <select id="dataset-select">
+                            <option value="sample_api_metrics.csv">Sample API Metrics (Original)</option>
+                            <option value="user_activities.csv">CakePHP API Activities (9,081 Real Logs)</option>
+                            <option value="custom_test_upload.csv">Server Telemetry (CPU, Memory, Conn)</option>
+                            <option value="no_change_metrics.csv">No-Change Baseline (Clean)</option>
+                            <option value="change_size_30ms.csv">Small Change (+30 ms shift)</option>
+                            <option value="change_size_70ms.csv">Medium Change (+70 ms shift)</option>
+                            <option value="change_size_150ms.csv">Large Change (+150 ms shift)</option>
+                            <option value="scenario_high_noise.csv">High Noise (σ=30ms, +70ms)</option>
+                            <option value="scenario_transient_spikes.csv">Transient Spikes (Outliers)</option>
+                            <option value="scenario_gradual_drift.csv">Gradual Drift (Memory Leak)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Or Upload Custom CSV</label>
+                        <div class="upload-dropzone" id="dropzone">
+                            <input type="file" id="file-input" accept=".csv" style="display: none;">
+                            <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+                            <p><span>Browse file</span> or drag & drop CSV</p>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="metric-select">Active Metric</label>
+                        <select id="metric-select">
+                            <!-- Populated dynamically based on CSV columns -->
+                        </select>
+                    </div>
+                </section>
+
+                <!-- Algorithm & Tuning Panel -->
+                <section class="panel">
+                    <div class="panel-title">
+                        <span>2. Detection Algorithm</span>
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                    </div>
+
+                    <div class="algo-tabs">
+                        <button class="algo-tab" data-algo="sliding_window">Sliding Win</button>
+                        <button class="algo-tab" data-algo="cusum">CUSUM</button>
+                        <button class="algo-tab" data-algo="robust_cusum">Robust CUSUM</button>
+                        <button class="algo-tab active" data-algo="ewma">EWMA</button>
+                    </div>
+
+                    <!-- Dynamic Algorithm Parameter Controls -->
+                    <div id="param-controls">
+                        <!-- Populated by JS according to selected algorithm -->
+                    </div>
+
+                    <!-- Display Overlays -->
+                    <div class="toggle-group" style="margin-top: 14px;">
+                        <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Show Ground Truth</span>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-truth" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-group">
+                        <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Show Pre/Post Means</span>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-means" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </section>
+            </aside>
+
+            <!-- Main Chart & Impact Area -->
+            <main class="main-content">
+                <!-- ECharts Panel -->
+                <section class="chart-panel">
+                    <div class="chart-header">
+                        <div class="chart-title">
+                            <h2 id="chart-heading">Metric Series Over Time</h2>
+                            <p id="chart-subheading">120 observations loaded</p>
+                        </div>
+
+                        <div class="chart-legend">
+                            <div class="legend-item">
+                                <span class="legend-dot" style="background: var(--primary);"></span>
+                                <span>Metric Value</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-dot" style="background: var(--rose);"></span>
+                                <span>Detected Change</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-dot" style="background: var(--cyan);"></span>
+                                <span>Ground Truth</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="chart"></div>
+                </section>
+
+                <!-- Impact Analysis Report -->
+                <section class="impact-card severity-critical" id="impact-section">
+                    <div class="impact-header">
+                        <div class="impact-status">
+                            <span class="severity-pill pill-critical" id="severity-badge">Critical Shift</span>
+                            <span style="font-size: 13px; font-weight: 600; color: var(--text-muted);" id="impact-subtitle">
+                                Change point detected at observation #72
+                            </span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-subtle);" id="stat-sig-tag">
+                            Welch's t-test: p < 0.001 (Statistically Significant)
+                        </div>
+                    </div>
+
+                    <div class="impact-stats-grid" id="kpi-grid">
+                        <div class="kpi-card">
+                            <div class="kpi-label">Pre-Change Mean</div>
+                            <div class="kpi-value" id="kpi-before">180.22</div>
+                            <div class="kpi-sub val-neutral" id="kpi-before-sub">Baseline window</div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-label">Post-Change Mean</div>
+                            <div class="kpi-value" id="kpi-after">428.16</div>
+                            <div class="kpi-sub val-up" id="kpi-after-sub">+247.94 ms (+137.6%)</div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-label">Effect Size (Cohen's d)</div>
+                            <div class="kpi-value" id="kpi-cohen">d = 31.72</div>
+                            <div class="kpi-sub val-up" id="kpi-cohen-sub">Huge Shift</div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-label">Detection Latency</div>
+                            <div class="kpi-value" id="kpi-latency">0.0 min</div>
+                            <div class="kpi-sub val-neutral" id="kpi-latency-sub">Exact Index #72</div>
+                        </div>
+                    </div>
+
+                    <!-- Comparison Table -->
+                    <div class="stats-table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Regime</th>
+                                    <th>Obs</th>
+                                    <th>Mean</th>
+                                    <th>Std Dev</th>
+                                    <th>Median</th>
+                                    <th>Min</th>
+                                    <th>Max</th>
+                                    <th>IQR</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stats-table-body">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="narrative-box" id="narrative-text">
+                        <strong>Impact Summary:</strong> Response time surged by +247.94 ms (+137.6%) after observation #72.
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Interactive Script -->
     <script>
-        const chartElement = document.getElementById("chart");
-        const metricSelector = document.getElementById("metric");
-        const statusElement = document.getElementById("status");
-
-        const chart = echarts.init(chartElement);
-
+        // State
+        let rawRows = [];
+        let currentDatasetName = "sample_api_metrics.csv";
         let timestamps = [];
         let dataset = [];
-        let changeIndex = -1;
+        let numericColumns = [];
+        let selectedMetric = "";
+        let groundTruthIndex = -1;
+        let activeAlgorithm = "ewma"; // Default to EWMA
+        let detectedEvents = [];
 
-        const metricSettings = {
-            response_time_ms: {
-                label: "Response Time",
-                unit: "ms"
-            },
-            failed_requests: {
-                label: "Failed Requests",
-                unit: "requests"
-            },
-            requests_per_minute: {
-                label: "Requests per Minute",
-                unit: "requests/min"
-            }
+        // Algorithm configurations
+        const algoConfigs = {
+            sliding_window: { window_size: 12, threshold: 50.0 },
+            cusum: { baseline_window: 20, drift: 0.5, threshold: 10.0 },
+            robust_cusum: { baseline_window: 20, drift: 0.5, threshold: 10.0, clip_z: 4.0 },
+            ewma: { baseline_window: 20, lambda_: 0.2, control_limit: 3.0, clip_z: 4.0 }
         };
 
-        async function loadDataset() {
-            try {
-                const response = await fetch("../data/sample_api_metrics.csv");
+        // DOM elements
+        const datasetSelect = document.getElementById("dataset-select");
+        const metricSelect = document.getElementById("metric-select");
+        const paramControls = document.getElementById("param-controls");
+        const dropzone = document.getElementById("dropzone");
+        const fileInput = document.getElementById("file-input");
+        const chartElement = document.getElementById("chart");
+        const toggleTruth = document.getElementById("toggle-truth");
+        const toggleMeans = document.getElementById("toggle-means");
 
-                if (!response.ok) {
-                    throw new Error("Could not load the CSV file.");
+        // Initialize ECharts
+        const chart = echarts.init(chartElement);
+        window.addEventListener("resize", () => chart.resize());
+
+        // -------------------------------------------------------------
+        // Math & Statistical Helpers
+        // -------------------------------------------------------------
+        const mean = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+        
+        function std(arr) {
+            if (arr.length < 2) return 0;
+            const m = mean(arr);
+            const variance = arr.reduce((sum, v) => sum + Math.pow(v - m, 2), 0) / (arr.length - 1);
+            return Math.sqrt(variance);
+        }
+
+        function median(arr) {
+            if (!arr.length) return 0;
+            const sorted = [...arr].sort((a, b) => a - b);
+            const mid = Math.floor(sorted.length / 2);
+            return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+        }
+
+        function quantile(arr, q) {
+            if (!arr.length) return 0;
+            const sorted = [...arr].sort((a, b) => a - b);
+            const pos = (sorted.length - 1) * q;
+            const base = Math.floor(pos);
+            const rest = pos - base;
+            if (sorted[base + 1] !== undefined) {
+                return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+            }
+            return sorted[base];
+        }
+
+        function computeStats(arr) {
+            if (!arr.length) return { count: 0, mean: 0, std: 0, median: 0, min: 0, max: 0, iqr: 0 };
+            const p25 = quantile(arr, 0.25);
+            const p75 = quantile(arr, 0.75);
+            return {
+                count: arr.length,
+                mean: mean(arr),
+                std: std(arr),
+                median: median(arr),
+                min: Math.min(...arr),
+                max: Math.max(...arr),
+                p25,
+                p75,
+                iqr: p75 - p25
+            };
+        }
+
+        function calculateCohenD(s1, s2) {
+            const n1 = s1.length, n2 = s2.length;
+            if (n1 < 2 || n2 < 2) return { d: 0, category: "negligible" };
+            const v1 = std(s1), v2 = std(s2);
+            const sPooled = Math.sqrt(((n1 - 1) * v1 * v1 + (n2 - 1) * v2 * v2) / (n1 + n2 - 2));
+            const diff = mean(s2) - mean(s1);
+            if (sPooled <= 1e-9) return { d: 0, category: "negligible" };
+            const d = diff / sPooled;
+            const absD = Math.abs(d);
+            let category = "huge";
+            if (absD < 0.2) category = "negligible";
+            else if (absD < 0.5) category = "small";
+            else if (absD < 0.8) category = "medium";
+            else if (absD < 2.0) category = "large";
+            return { d, category };
+        }
+
+        // -------------------------------------------------------------
+        // Client-side Detection Algorithms (matching Python engine)
+        // -------------------------------------------------------------
+        function runSlidingWindow(values, cfg) {
+            const { window_size, threshold } = cfg;
+            if (values.length < window_size * 2) return [];
+            const candidates = [];
+            for (let i = window_size; i <= values.length - window_size; i++) {
+                const earlier = values.slice(i - window_size, i);
+                const recent = values.slice(i, i + window_size);
+                const diff = mean(recent) - mean(earlier);
+                if (Math.abs(diff) >= threshold) {
+                    candidates.push({ index: i, diff, direction: diff > 0 ? "up" : "down" });
+                }
+            }
+            if (!candidates.length) return [];
+            // Group consecutive candidates (max gap = 1)
+            const groups = [[candidates[0]]];
+            for (let i = 1; i < candidates.length; i++) {
+                const prev = groups[groups.length - 1].slice(-1)[0];
+                if (candidates[i].index - prev.index <= 1) {
+                    groups[groups.length - 1].push(candidates[i]);
+                } else {
+                    groups.push([candidates[i]]);
+                }
+            }
+            return groups.map(g => g.reduce((max, c) => Math.abs(c.diff) > Math.abs(max.diff) ? c : max, g[0]));
+        }
+
+        function runCusum(values, cfg) {
+            const { baseline_window, drift, threshold, clip_z } = cfg;
+            if (values.length < baseline_window) return [];
+            let baseMean = mean(values.slice(0, baseline_window));
+            let baseStd = std(values.slice(0, baseline_window));
+            if (baseStd <= 0) return [];
+
+            let posSum = 0, negSum = 0;
+            let idx = baseline_window;
+            const events = [];
+
+            while (idx < values.length) {
+                const val = values[idx];
+                let z = (val - baseMean) / baseStd;
+                if (clip_z !== undefined && clip_z !== null) {
+                    z = Math.max(-clip_z, Math.min(clip_z, z));
+                }
+                posSum = Math.max(0, posSum + z - drift);
+                negSum = Math.min(0, negSum + z + drift);
+
+                let dir = null, score = 0;
+                if (posSum >= threshold) {
+                    dir = "up"; score = posSum;
+                } else if (negSum <= -threshold) {
+                    dir = "down"; score = Math.abs(negSum);
                 }
 
-                const csvText = await response.text();
-                const rows = csvText.trim().split(/\r?\n/);
-                const headers = rows[0].split(",");
+                if (dir) {
+                    events.push({ index: idx, direction: dir, score });
+                    const start = idx + 1;
+                    const end = start + baseline_window;
+                    if (end > values.length) break;
+                    const newBase = values.slice(start, end);
+                    baseStd = std(newBase);
+                    if (baseStd <= 0) break;
+                    baseMean = mean(newBase);
+                    posSum = 0; negSum = 0;
+                    idx = end;
+                    continue;
+                }
+                idx++;
+            }
+            return events;
+        }
 
-                dataset = rows.slice(1).map(row => {
-                    const values = row.split(",");
-                    const record = {};
+        function runEWMA(values, cfg) {
+            const { baseline_window, lambda_, control_limit, clip_z } = cfg;
+            if (values.length < baseline_window) return [];
+            let mu = mean(values.slice(0, baseline_window));
+            let sigma = std(values.slice(0, baseline_window));
+            if (sigma <= 0) return [];
 
-                    headers.forEach((header, index) => {
-                        record[header] = values[index];
+            let z = mu;
+            const events = [];
+            let step = 0;
+
+            for (let idx = baseline_window; idx < values.length; idx++) {
+                step++;
+                let x = values[idx];
+                if (clip_z !== undefined && clip_z !== null) {
+                    const zVal = (x - mu) / sigma;
+                    const clippedZ = Math.max(-clip_z, Math.min(clip_z, zVal));
+                    x = mu + clippedZ * sigma;
+                }
+                z = lambda_ * x + (1.0 - lambda_) * z;
+                const varFactor = (lambda_ / (2.0 - lambda_)) * (1.0 - Math.pow(1.0 - lambda_, 2 * step));
+                const stdZ = sigma * Math.sqrt(varFactor);
+                const ucl = mu + control_limit * stdZ;
+                const lcl = mu - control_limit * stdZ;
+
+                let dir = null, score = 0;
+                if (z > ucl) {
+                    dir = "up"; score = (z - ucl) / stdZ;
+                } else if (z < lcl) {
+                    dir = "down"; score = (lcl - z) / stdZ;
+                }
+
+                if (dir) {
+                    events.push({ index: idx, direction: dir, score });
+                    if (idx + baseline_window <= values.length) {
+                        const newBase = values.slice(idx, idx + baseline_window);
+                        mu = mean(newBase);
+                        sigma = std(newBase);
+                        z = mu;
+                        step = 0;
+                        if (sigma <= 0) break;
+                    } else {
+                        break;
+                    }
+                }
+            }
+            return events;
+        }
+
+        // -------------------------------------------------------------
+        // CSV Parsing & Data Loading (PapaParse with CakePHP & Headerless Support)
+        // -------------------------------------------------------------
+        function parseCSV(text) {
+            let dataRows = [];
+            let headers = [];
+
+            if (typeof Papa !== "undefined") {
+                const parsed = Papa.parse(text, { skipEmptyLines: true });
+                if (!parsed.data || parsed.data.length < 2) throw new Error("CSV has insufficient rows");
+                
+                const rawRow0 = parsed.data[0];
+                // Check if row 0 is actually data rather than header names:
+                // If col 0 is a number, or if any cell is a date like '2026-09-16'
+                const looksLikeData = !isNaN(Number(rawRow0[0])) || rawRow0.some(c => /^\d{4}-\d{2}-\d{2}/.test(String(c).trim()));
+
+                if (looksLikeData) {
+                    dataRows = parsed.data;
+                    const colCount = rawRow0.length;
+                    if (colCount === 16) {
+                        // Standard CakePHP API activities log schema
+                        headers = [
+                            "id", "user_id", "api_name", "action", "client",
+                            "request_params", "response", "status_code", "url",
+                            "ip", "os", "browser", "extra", "log_type",
+                            "execution_time", "created"
+                        ];
+                    } else {
+                        headers = Array.from({ length: colCount }, (_, i) => `col_${i}`);
+                    }
+                } else {
+                    headers = rawRow0.map(h => String(h || "").trim().replace(/^["']|["']$/g, ''));
+                    dataRows = parsed.data.slice(1);
+                }
+
+                const rows = dataRows.map(r => {
+                    const obj = {};
+                    headers.forEach((h, idx) => {
+                        obj[h] = r[idx] !== undefined ? String(r[idx]).trim() : "";
                     });
-
-                    return record;
+                    return obj;
                 });
+                return { headers, rows };
+            }
 
-                timestamps = dataset.map(row => row.timestamp);
-
-                changeIndex = dataset.findIndex(
-                    row => Number(row.is_after_change) === 1
-                );
-
-                if (dataset.length === 0 || changeIndex < 0) {
-                    throw new Error("Dataset or known change point is missing.");
+            // Fallback manual parser
+            const lines = text.trim().split(/\r?\n/);
+            if (lines.length < 2) throw new Error("CSV has insufficient rows");
+            headers = lines[0].split(",").map(h => h.trim().replace(/^["']|["']$/g, ''));
+            const rows = [];
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(",").map(c => c.trim().replace(/^["']|["']$/g, ''));
+                if (cols.length === headers.length) {
+                    const obj = {};
+                    headers.forEach((h, idx) => { obj[h] = cols[idx]; });
+                    rows.push(obj);
                 }
+            }
+            return { headers, rows };
+        }
 
-                statusElement.textContent =
-                    `${dataset.length} observations loaded`;
-
-                updateChart();
-            } catch (error) {
-                statusElement.textContent = "Could not load dataset";
-                chartElement.innerHTML =
-                    '<p style="color:#b91c1c;padding:20px;">' +
-                    'Error: ' + error.message +
-                    '. Start the local server from the project root and reload.' +
-                    '</p>';
-
-                console.error(error);
+        async function loadDataset(filename) {
+            try {
+                document.getElementById("status-badge").textContent = "Loading...";
+                const res = await fetch(`../data/${filename}`);
+                if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+                const text = await res.text();
+                processCSVData(text, filename);
+            } catch (err) {
+                console.error("Load failed:", err);
+                document.getElementById("status-badge").textContent = "Error";
             }
         }
 
-        function updateChart() {
-            const metric = metricSelector.value;
-            const settings = metricSettings[metric];
+        function processCSVData(csvText, name) {
+            const { headers, rows } = parseCSV(csvText);
 
-            const values = dataset.map(row => Number(row[metric]));
+            // Find timestamp column (look for created, timestamp, datetime, date, ts)
+            const tsCol = headers.find(h => [
+                "created", "timestamp", "datetime", "date", "time", "ts", "recorded_at"
+            ].includes(h.toLowerCase())) || headers[headers.length - 1];
+
+            // Filter numeric columns
+            numericColumns = headers.filter(h => {
+                if (["id", "user_id", "status_code", "is_after_change", "anomaly", "label"].includes(h.toLowerCase())) return false;
+                // Test if column has numeric values across sample
+                const validNumbers = rows.slice(0, 30).map(r => Number(r[h])).filter(v => !isNaN(v) && v !== null && v !== 0);
+                return validNumbers.length >= 3;
+            });
+
+            // Prioritize execution_time or latency if present
+            const priorityMetric = numericColumns.find(c => 
+                c.toLowerCase().includes("execution_time") || 
+                c.toLowerCase().includes("response_time") || 
+                c.toLowerCase().includes("latency")
+            );
+            if (priorityMetric) {
+                numericColumns = [priorityMetric, ...numericColumns.filter(c => c !== priorityMetric)];
+            }
+
+            if (!numericColumns.length) {
+                alert("No numeric metrics found in this CSV to analyze.");
+                return;
+            }
+
+            selectedMetric = numericColumns[0];
+
+            // Filter dataset to rows where selected metric and timestamp are valid
+            const cleanRows = rows.filter(r => {
+                const v = Number(r[selectedMetric]);
+                return !isNaN(v) && r[selectedMetric] !== "" && r[selectedMetric] !== "NULL" && r[tsCol] && r[tsCol] !== "NULL";
+            });
+
+            dataset = cleanRows;
+            timestamps = cleanRows.map(r => r[tsCol]);
+
+            // Find ground truth index if available
+            groundTruthIndex = -1;
+            const flagCol = headers.find(h => ["is_after_change", "anomaly", "label"].includes(h.toLowerCase()));
+            if (flagCol) {
+                groundTruthIndex = cleanRows.findIndex(r => Number(r[flagCol]) === 1);
+            }
+
+            // Populate metric selector
+            metricSelect.innerHTML = "";
+            numericColumns.forEach(col => {
+                const opt = document.createElement("option");
+                opt.value = col;
+                opt.textContent = col.replace(/_/g, " ").toUpperCase();
+                metricSelect.appendChild(opt);
+            });
+
+            metricSelect.value = selectedMetric;
+            document.getElementById("chart-subheading").textContent = `${cleanRows.length} valid observations loaded from ${name}`;
+            document.getElementById("status-badge").textContent = "Analysis Active";
+
+            renderParamControls();
+            runDetectionAndUpdate();
+        }
+
+        // -------------------------------------------------------------
+        // UI Controls & Param Rendering
+        // -------------------------------------------------------------
+        function renderParamControls() {
+            paramControls.innerHTML = "";
+            const cfg = algoConfigs[activeAlgorithm];
+
+            if (activeAlgorithm === "sliding_window") {
+                paramControls.innerHTML = `
+                    <div class="form-group">
+                        <label>Window Size <span class="label-val" id="val-ws">${cfg.window_size}</span></label>
+                        <input type="range" id="param-ws" min="4" max="30" value="${cfg.window_size}">
+                    </div>
+                    <div class="form-group">
+                        <label>Difference Threshold (ms) <span class="label-val" id="val-th">${cfg.threshold}</span></label>
+                        <input type="range" id="param-th" min="10" max="200" step="5" value="${cfg.threshold}">
+                    </div>
+                `;
+                document.getElementById("param-ws").addEventListener("input", e => {
+                    cfg.window_size = Number(e.target.value);
+                    document.getElementById("val-ws").textContent = cfg.window_size;
+                    runDetectionAndUpdate();
+                });
+                document.getElementById("param-th").addEventListener("input", e => {
+                    cfg.threshold = Number(e.target.value);
+                    document.getElementById("val-th").textContent = cfg.threshold;
+                    runDetectionAndUpdate();
+                });
+            } else if (activeAlgorithm === "cusum" || activeAlgorithm === "robust_cusum") {
+                const isRobust = activeAlgorithm === "robust_cusum";
+                paramControls.innerHTML = `
+                    <div class="form-group">
+                        <label>Baseline Window <span class="label-val" id="val-bw">${cfg.baseline_window}</span></label>
+                        <input type="range" id="param-bw" min="5" max="30" value="${cfg.baseline_window}">
+                    </div>
+                    <div class="form-group">
+                        <label>Threshold <span class="label-val" id="val-cth">${cfg.threshold}</span></label>
+                        <input type="range" id="param-cth" min="2" max="25" step="0.5" value="${cfg.threshold}">
+                    </div>
+                    ${isRobust ? `
+                    <div class="form-group">
+                        <label>Clip Z-Score (Winsorize) <span class="label-val" id="val-cz">${cfg.clip_z}</span></label>
+                        <input type="range" id="param-cz" min="2" max="8" step="0.5" value="${cfg.clip_z}">
+                    </div>` : ''}
+                `;
+                document.getElementById("param-bw").addEventListener("input", e => {
+                    cfg.baseline_window = Number(e.target.value);
+                    document.getElementById("val-bw").textContent = cfg.baseline_window;
+                    runDetectionAndUpdate();
+                });
+                document.getElementById("param-cth").addEventListener("input", e => {
+                    cfg.threshold = Number(e.target.value);
+                    document.getElementById("val-cth").textContent = cfg.threshold;
+                    runDetectionAndUpdate();
+                });
+                if (isRobust) {
+                    document.getElementById("param-cz").addEventListener("input", e => {
+                        cfg.clip_z = Number(e.target.value);
+                        document.getElementById("val-cz").textContent = cfg.clip_z;
+                        runDetectionAndUpdate();
+                    });
+                }
+            } else if (activeAlgorithm === "ewma") {
+                paramControls.innerHTML = `
+                    <div class="form-group">
+                        <label>Smoothing Weight (λ) <span class="label-val" id="val-lam">${cfg.lambda_}</span></label>
+                        <input type="range" id="param-lam" min="0.05" max="0.5" step="0.05" value="${cfg.lambda_}">
+                    </div>
+                    <div class="form-group">
+                        <label>Control Limit (L·σ) <span class="label-val" id="val-cl">${cfg.control_limit}</span></label>
+                        <input type="range" id="param-cl" min="1.5" max="5.0" step="0.2" value="${cfg.control_limit}">
+                    </div>
+                    <div class="form-group">
+                        <label>Clip Outlier Z <span class="label-val" id="val-ew-cz">${cfg.clip_z}</span></label>
+                        <input type="range" id="param-ew-cz" min="2" max="8" step="0.5" value="${cfg.clip_z}">
+                    </div>
+                `;
+                document.getElementById("param-lam").addEventListener("input", e => {
+                    cfg.lambda_ = Number(e.target.value);
+                    document.getElementById("val-lam").textContent = cfg.lambda_;
+                    runDetectionAndUpdate();
+                });
+                document.getElementById("param-cl").addEventListener("input", e => {
+                    cfg.control_limit = Number(e.target.value);
+                    document.getElementById("val-cl").textContent = cfg.control_limit;
+                    runDetectionAndUpdate();
+                });
+                document.getElementById("param-ew-cz").addEventListener("input", e => {
+                    cfg.clip_z = Number(e.target.value);
+                    document.getElementById("val-ew-cz").textContent = cfg.clip_z;
+                    runDetectionAndUpdate();
+                });
+            }
+        }
+
+        // -------------------------------------------------------------
+        // Detection Execution & Rendering
+        // -------------------------------------------------------------
+        function runDetectionAndUpdate() {
+            if (!dataset.length || !selectedMetric) return;
+
+            const values = dataset.map(r => Number(r[selectedMetric]));
+            const cfg = algoConfigs[activeAlgorithm];
+
+            if (activeAlgorithm === "sliding_window") {
+                detectedEvents = runSlidingWindow(values, cfg);
+            } else if (activeAlgorithm === "cusum") {
+                detectedEvents = runCusum(values, cfg);
+            } else if (activeAlgorithm === "robust_cusum") {
+                detectedEvents = runCusum(values, cfg);
+            } else if (activeAlgorithm === "ewma") {
+                detectedEvents = runEWMA(values, cfg);
+            }
+
+            updateChart(values);
+            updateImpactCard(values);
+        }
+
+        function updateChart(values) {
+            const showTruth = toggleTruth.checked && groundTruthIndex >= 0;
+            const showMeans = toggleMeans.checked && detectedEvents.length > 0;
+
+            const markLines = [];
+
+            // Add Ground Truth reference line
+            if (showTruth) {
+                markLines.push({
+                    xAxis: timestamps[groundTruthIndex],
+                    lineStyle: { color: "#06b6d4", type: "dashed", width: 2 },
+                    label: {
+                        formatter: `Known Change (#${groundTruthIndex})`,
+                        color: "#06b6d4",
+                        position: "insideEndTop",
+                        fontSize: 11
+                    }
+                });
+            }
+
+            // Add Detected Change Point markers
+            detectedEvents.forEach((ev, idx) => {
+                const isUp = ev.direction === "up";
+                markLines.push({
+                    xAxis: timestamps[ev.index],
+                    lineStyle: {
+                        color: isUp ? "#f43f5e" : "#10b981",
+                        width: 2.5,
+                        type: "solid"
+                    },
+                    label: {
+                        formatter: `▲ Detected #${ev.index} (${activeAlgorithm.toUpperCase()})`,
+                        color: isUp ? "#f43f5e" : "#10b981",
+                        fontWeight: "bold",
+                        fontSize: 11,
+                        position: "middle"
+                    }
+                });
+            });
+
+            // Pre/Post Mean Lines if change detected
+            let markAreas = [];
+            if (showMeans && detectedEvents.length > 0) {
+                const firstIdx = detectedEvents[0].index;
+                const beforeVals = values.slice(0, firstIdx);
+                const afterVals = values.slice(firstIdx);
+                const bMean = mean(beforeVals);
+                const aMean = mean(afterVals);
+
+                markLines.push({
+                    yAxis: bMean,
+                    lineStyle: { color: "rgba(148, 163, 184, 0.5)", type: "dotted", width: 1.5 },
+                    label: { formatter: `Pre μ: ${bMean.toFixed(1)}`, position: "start", fontSize: 10, color: "#94a3b8" }
+                });
+                markLines.push({
+                    yAxis: aMean,
+                    lineStyle: { color: "rgba(244, 63, 94, 0.6)", type: "dotted", width: 1.5 },
+                    label: { formatter: `Post μ: ${aMean.toFixed(1)}`, position: "end", fontSize: 10, color: "#f43f5e" }
+                });
+            }
 
             chart.setOption({
-                title: {
-                    text: settings.label + " Over Time",
-                    left: "center",
-                    textStyle: {
-                        fontSize: 18
-                    }
-                },
-
+                backgroundColor: "transparent",
                 tooltip: {
                     trigger: "axis",
-                    formatter: function (items) {
-                        const item = items[0];
-                        const timestamp = timestamps[item.dataIndex];
-
-                        return (
-                            timestamp +
-                            "<br/>" +
-                            item.marker +
-                            settings.label +
-                            ": <strong>" +
-                            item.value +
-                            " " + settings.unit +
-                            "</strong>"
-                        );
+                    backgroundColor: "#1e293b",
+                    borderColor: "#334155",
+                    textStyle: { color: "#f8fafc", fontSize: 12 },
+                    formatter: items => {
+                        const it = items[0];
+                        const idx = it.dataIndex;
+                        return `
+                            <div style="font-weight:700;margin-bottom:4px;">${timestamps[idx]} (Obs #${idx})</div>
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#6366f1;"></span>
+                                <span>${selectedMetric}: <strong>${it.value.toFixed(2)}</strong></span>
+                            </div>
+                        `;
                     }
                 },
-
-                grid: {
-                    left: 65,
-                    right: 30,
-                    top: 75,
-                    bottom: 105
-                },
-
+                grid: { left: 55, right: 35, top: 40, bottom: 85 },
                 xAxis: {
                     type: "category",
                     data: timestamps,
                     boundaryGap: false,
+                    axisLine: { lineStyle: { color: "#334155" } },
                     axisLabel: {
-                        formatter: function (value) {
-                            return value.slice(11, 16);
-                        }
+                        color: "#94a3b8",
+                        formatter: val => val.length > 10 ? val.slice(11, 16) : val
                     }
                 },
-
                 yAxis: {
                     type: "value",
-                    name: settings.unit,
-                    scale: true
+                    scale: true,
+                    axisLine: { lineStyle: { color: "#334155" } },
+                    splitLine: { lineStyle: { color: "rgba(51, 65, 85, 0.4)" } },
+                    axisLabel: { color: "#94a3b8" }
                 },
-
                 dataZoom: [
-                    {
-                        type: "inside",
-                        start: 0,
-                        end: 100
-                    },
+                    { type: "inside", start: 0, end: 100 },
                     {
                         type: "slider",
                         start: 0,
                         end: 100,
-                        bottom: 25
+                        bottom: 15,
+                        borderColor: "#334155",
+                        fillerColor: "rgba(99, 102, 241, 0.15)",
+                        handleStyle: { color: "#6366f1" },
+                        textStyle: { color: "#94a3b8" }
                     }
                 ],
-
                 series: [{
-                    name: settings.label,
+                    name: selectedMetric,
                     type: "line",
                     data: values,
-                    smooth: false,
+                    smooth: true,
                     showSymbol: false,
-                    lineStyle: {
-                        width: 2
+                    lineStyle: { width: 2.5, color: "#6366f1" },
+                    areaStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: "rgba(99, 102, 241, 0.35)" },
+                            { offset: 1, color: "rgba(99, 102, 241, 0.0)" }
+                        ])
                     },
                     markLine: {
                         symbol: ["none", "none"],
-                        lineStyle: {
-                            type: "dashed",
-                            width: 2
-                        },
-                        label: {
-                            formatter: "Known change (15:00)",
-                            position: "insideEndTop"
-                        },
-                        data: [{
-                            xAxis: timestamps[changeIndex]
-                        }]
+                        data: markLines
                     }
                 }]
             }, true);
         }
 
-        metricSelector.addEventListener("change", updateChart);
+        // -------------------------------------------------------------
+        // Statistical Impact Card Rendering
+        // -------------------------------------------------------------
+        function updateImpactCard(values) {
+            const impactCard = document.getElementById("impact-section");
+            const badge = document.getElementById("severity-badge");
+            const subtitle = document.getElementById("impact-subtitle");
+            const sigTag = document.getElementById("stat-sig-tag");
+            const kpiBefore = document.getElementById("kpi-before");
+            const kpiAfter = document.getElementById("kpi-after");
+            const kpiAfterSub = document.getElementById("kpi-after-sub");
+            const kpiCohen = document.getElementById("kpi-cohen");
+            const kpiCohenSub = document.getElementById("kpi-cohen-sub");
+            const kpiLatency = document.getElementById("kpi-latency");
+            const kpiLatencySub = document.getElementById("kpi-latency-sub");
+            const tbody = document.getElementById("stats-table-body");
+            const narrative = document.getElementById("narrative-text");
 
-        window.addEventListener("resize", function () {
-            chart.resize();
+            if (!detectedEvents.length) {
+                // Stable / No change detected state
+                impactCard.className = "impact-card severity-low";
+                badge.className = "severity-pill pill-low";
+                badge.textContent = "Stable Series";
+                subtitle.textContent = "No significant change points detected";
+                sigTag.textContent = "Metrics remain within normal variation";
+
+                const fullStats = computeStats(values);
+                kpiBefore.textContent = fullStats.mean.toFixed(2);
+                document.getElementById("kpi-before-sub").textContent = "Overall mean";
+                kpiAfter.textContent = fullStats.median.toFixed(2);
+                kpiAfterSub.className = "kpi-sub val-neutral";
+                kpiAfterSub.textContent = `Std: ${fullStats.std.toFixed(2)}`;
+                kpiCohen.textContent = "d = 0.00";
+                kpiCohenSub.className = "kpi-sub val-neutral";
+                kpiCohenSub.textContent = "No shift";
+                kpiLatency.textContent = "N/A";
+                kpiLatencySub.textContent = "0 detections";
+
+                tbody.innerHTML = `
+                    <tr>
+                        <td>Entire Series</td>
+                        <td>${fullStats.count}</td>
+                        <td>${fullStats.mean.toFixed(2)}</td>
+                        <td>${fullStats.std.toFixed(2)}</td>
+                        <td>${fullStats.median.toFixed(2)}</td>
+                        <td>${fullStats.min.toFixed(2)}</td>
+                        <td>${fullStats.max.toFixed(2)}</td>
+                        <td>${fullStats.iqr.toFixed(2)}</td>
+                    </tr>
+                `;
+
+                narrative.innerHTML = `<strong>Status:</strong> The metric <code>${selectedMetric}</code> exhibits stable baseline behavior with zero sustained anomalies.`;
+                return;
+            }
+
+            // A change was detected
+            const firstChange = detectedEvents[0];
+            const changeIdx = firstChange.index;
+            const beforeVals = values.slice(0, changeIdx);
+            const afterVals = values.slice(changeIdx);
+
+            const sBefore = computeStats(beforeVals);
+            const sAfter = computeStats(afterVals);
+            const absChange = sAfter.mean - sBefore.mean;
+            const pctChange = sBefore.mean !== 0 ? (absChange / Math.abs(sBefore.mean)) * 100 : 0;
+            const { d, category } = calculateCohenD(beforeVals, afterVals);
+
+            // Severity calculation
+            let severity = "critical";
+            let pillClass = "pill-critical";
+            let cardClass = "severity-critical";
+            const absD = Math.abs(d);
+
+            if (absD < 0.2) {
+                severity = "Negligible"; pillClass = "pill-negligible"; cardClass = "severity-low";
+            } else if (absD < 0.5) {
+                severity = "Low Shift"; pillClass = "pill-low"; cardClass = "severity-low";
+            } else if (absD < 1.0) {
+                severity = "Moderate Shift"; pillClass = "pill-medium"; cardClass = "severity-medium";
+            } else if (absD < 2.5) {
+                severity = "High Shift"; pillClass = "pill-high"; cardClass = "severity-high";
+            } else {
+                severity = "Critical Shift"; pillClass = "pill-critical"; cardClass = "severity-critical";
+            }
+
+            impactCard.className = `impact-card ${cardClass}`;
+            badge.className = `severity-pill ${pillClass}`;
+            badge.textContent = severity;
+            subtitle.textContent = `Shift detected at observation #${changeIdx} (${timestamps[changeIdx] || ''})`;
+            sigTag.textContent = `Effect Size Category: ${category.toUpperCase()} (d=${d.toFixed(2)})`;
+
+            kpiBefore.textContent = sBefore.mean.toFixed(2);
+            document.getElementById("kpi-before-sub").textContent = `${sBefore.count} observations before`;
+
+            kpiAfter.textContent = sAfter.mean.toFixed(2);
+            const sign = absChange > 0 ? "+" : "";
+            kpiAfterSub.className = absChange > 0 ? "kpi-sub val-up" : "kpi-sub val-down";
+            kpiAfterSub.textContent = `${sign}${absChange.toFixed(2)} (${sign}${pctChange.toFixed(1)}%)`;
+
+            kpiCohen.textContent = `d = ${d.toFixed(2)}`;
+            kpiCohenSub.className = absD >= 1.0 ? "kpi-sub val-up" : "kpi-sub val-neutral";
+            kpiCohenSub.textContent = `${category.toUpperCase()} magnitude`;
+
+            if (groundTruthIndex >= 0) {
+                const diffIdx = changeIdx - groundTruthIndex;
+                const diffMin = diffIdx * 5; // 5 min cadence
+                kpiLatency.textContent = `${diffMin >= 0 ? "+" : ""}${diffMin} min`;
+                kpiLatencySub.textContent = `${diffIdx >= 0 ? "+" : ""}${diffIdx} steps from truth (#${groundTruthIndex})`;
+            } else {
+                kpiLatency.textContent = `#${changeIdx}`;
+                kpiLatencySub.textContent = "First detection step";
+            }
+
+            tbody.innerHTML = `
+                <tr>
+                    <td style="color:#94a3b8;font-weight:600;">Pre-Change</td>
+                    <td>${sBefore.count}</td>
+                    <td>${sBefore.mean.toFixed(2)}</td>
+                    <td>${sBefore.std.toFixed(2)}</td>
+                    <td>${sBefore.median.toFixed(2)}</td>
+                    <td>${sBefore.min.toFixed(2)}</td>
+                    <td>${sBefore.max.toFixed(2)}</td>
+                    <td>${sBefore.iqr.toFixed(2)}</td>
+                </tr>
+                <tr>
+                    <td style="color:#f43f5e;font-weight:600;">Post-Change</td>
+                    <td>${sAfter.count}</td>
+                    <td>${sAfter.mean.toFixed(2)}</td>
+                    <td>${sAfter.std.toFixed(2)}</td>
+                    <td>${sAfter.median.toFixed(2)}</td>
+                    <td>${sAfter.min.toFixed(2)}</td>
+                    <td>${sAfter.max.toFixed(2)}</td>
+                    <td>${sAfter.iqr.toFixed(2)}</td>
+                </tr>
+            `;
+
+            const directionWord = absChange > 0 ? "increased" : "decreased";
+            narrative.innerHTML = `
+                <strong>Analysis Narrative:</strong> <code>${selectedMetric}</code> ${directionWord} by 
+                <strong>${Math.abs(absChange).toFixed(2)}</strong> (<strong>${pctChange.toFixed(1)}%</strong>) 
+                at observation #${changeIdx}. The standardized effect size is <strong>${category.toUpperCase()}</strong> (Cohen's d = ${d.toFixed(2)}), 
+                indicating a <strong>${severity.toUpperCase()}</strong> regime shift.
+            `;
+        }
+
+        // -------------------------------------------------------------
+        // Event Listeners
+        // -------------------------------------------------------------
+        datasetSelect.addEventListener("change", e => {
+            currentDatasetName = e.target.value;
+            loadDataset(currentDatasetName);
         });
 
-        loadDataset();
+        metricSelect.addEventListener("change", e => {
+            selectedMetric = e.target.value;
+            document.getElementById("chart-heading").textContent = `${selectedMetric.replace(/_/g, " ").toUpperCase()} Over Time`;
+            runDetectionAndUpdate();
+        });
+
+        document.querySelectorAll(".algo-tab").forEach(tab => {
+            tab.addEventListener("click", () => {
+                document.querySelectorAll(".algo-tab").forEach(t => t.classList.remove("active"));
+                tab.classList.add("active");
+                activeAlgorithm = tab.dataset.algo;
+                renderParamControls();
+                runDetectionAndUpdate();
+            });
+        });
+
+        toggleTruth.addEventListener("change", () => {
+            if (dataset.length) updateChart(dataset.map(r => Number(r[selectedMetric])));
+        });
+
+        toggleMeans.addEventListener("change", () => {
+            if (dataset.length) updateChart(dataset.map(r => Number(r[selectedMetric])));
+        });
+
+        // Drag & Drop CSV upload
+        dropzone.addEventListener("click", () => fileInput.click());
+        dropzone.addEventListener("dragover", e => {
+            e.preventDefault();
+            dropzone.style.borderColor = "var(--primary)";
+        });
+        dropzone.addEventListener("dragleave", () => {
+            dropzone.style.borderColor = "var(--border-highlight)";
+        });
+        dropzone.addEventListener("drop", e => {
+            e.preventDefault();
+            dropzone.style.borderColor = "var(--border-highlight)";
+            if (e.dataTransfer.files.length) {
+                handleUploadedFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener("change", e => {
+            if (e.target.files.length) {
+                handleUploadedFile(e.target.files[0]);
+            }
+        });
+
+        function handleUploadedFile(file) {
+            const reader = new FileReader();
+            reader.onload = ev => {
+                const text = ev.target.result;
+                processCSVData(text, file.name);
+                // Add temporary option to dataset select
+                const opt = document.createElement("option");
+                opt.value = file.name;
+                opt.textContent = `Custom: ${file.name}`;
+                opt.selected = true;
+                datasetSelect.appendChild(opt);
+            };
+            reader.readAsText(file);
+        }
+
+        // Initial Load
+        loadDataset(currentDatasetName);
     </script>
 </body>
 </html>
