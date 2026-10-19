@@ -6,7 +6,7 @@
     <title>PatternTime | Interactive Time-Series Investigation Laboratory</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Primary local ECharts & PapaParse with CDN fallback -->
     <script src="../node_modules/echarts/dist/echarts.min.js"></script>
@@ -28,12 +28,14 @@
             --bg-card: #0f172a;
             --bg-card-hover: #131e36;
             --bg-input: #1e293b;
+            --bg-glass: rgba(15, 23, 42, 0.75);
             --border-color: #1e293b;
             --border-highlight: #334155;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
             --text-subtle: #64748b;
             --primary: #6366f1;
+            --primary-light: #818cf8;
             --primary-glow: rgba(99, 102, 241, 0.25);
             --cyan: #06b6d4;
             --emerald: #10b981;
@@ -59,6 +61,7 @@
             padding: 24px;
             line-height: 1.5;
             -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
         }
 
         .container {
@@ -67,6 +70,7 @@
             display: flex;
             flex-direction: column;
             gap: 20px;
+            width: 100%;
         }
 
         /* Header Navigation */
@@ -74,12 +78,14 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 18px 24px;
+            padding: 16px 24px;
             background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
             backdrop-filter: blur(12px);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-lg);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            flex-wrap: wrap;
+            gap: 16px;
         }
 
         .brand {
@@ -89,8 +95,8 @@
         }
 
         .brand-icon {
-            width: 42px;
-            height: 42px;
+            width: 44px;
+            height: 44px;
             border-radius: 12px;
             background: linear-gradient(135deg, var(--primary) 0%, var(--cyan) 100%);
             display: flex;
@@ -100,8 +106,8 @@
         }
 
         .brand-icon svg {
-            width: 22px;
-            height: 22px;
+            width: 24px;
+            height: 24px;
             fill: white;
         }
 
@@ -120,17 +126,18 @@
             font-weight: 400;
         }
 
-        .header-meta {
+        .header-actions {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
         .badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 5px 12px;
+            padding: 6px 14px;
             border-radius: 9999px;
             font-size: 12px;
             font-weight: 600;
@@ -153,14 +160,99 @@
             box-shadow: 0 0 8px var(--emerald);
         }
 
+        .badge-loading {
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--primary-light);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .badge-error {
+            background: rgba(244, 63, 94, 0.15);
+            color: var(--rose);
+            border: 1px solid rgba(244, 63, 94, 0.3);
+        }
+
+        .btn {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 7px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.15);
+            color: white;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            box-shadow: 0 2px 8px var(--primary-glow);
+        }
+
+        .btn-primary:hover {
+            background: #4f46e5;
+            border-color: #4f46e5;
+        }
+
+        .btn-subtle {
+            background: transparent;
+            border-color: var(--border-highlight);
+            color: var(--text-muted);
+        }
+
+        .btn-subtle:hover {
+            border-color: var(--text-muted);
+            color: var(--text-main);
+        }
+
+        /* Error Notification Banner */
+        .error-banner {
+            display: none;
+            padding: 12px 18px;
+            background: rgba(244, 63, 94, 0.15);
+            border: 1px solid rgba(244, 63, 94, 0.4);
+            border-radius: var(--radius-md);
+            color: #fecdd3;
+            font-size: 13px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .error-banner.visible {
+            display: flex;
+        }
+
+        .error-banner button {
+            background: none;
+            border: none;
+            color: #fecdd3;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
         /* Main Workspace Grid */
         .workspace {
             display: grid;
-            grid-template-columns: 360px 1fr;
+            grid-template-columns: 350px minmax(0, 1fr);
             gap: 20px;
+            width: 100%;
+            min-width: 0;
         }
 
-        @media (max-width: 1080px) {
+        @media (max-width: 1120px) {
             .workspace {
                 grid-template-columns: 1fr;
             }
@@ -238,6 +330,12 @@
             box-shadow: 0 0 0 3px var(--primary-glow);
         }
 
+        optgroup {
+            color: var(--text-muted);
+            background: var(--bg-card);
+            font-weight: 700;
+        }
+
         /* Range Slider */
         input[type="range"] {
             -webkit-appearance: none;
@@ -268,16 +366,17 @@
         .upload-dropzone {
             border: 2px dashed var(--border-highlight);
             border-radius: var(--radius-md);
-            padding: 16px;
+            padding: 16px 14px;
             text-align: center;
             cursor: pointer;
             transition: var(--transition);
-            background: rgba(30, 41, 59, 0.3);
+            background: rgba(30, 41, 59, 0.25);
         }
 
-        .upload-dropzone:hover {
+        .upload-dropzone:hover, .upload-dropzone.drag-active {
             border-color: var(--primary);
-            background: rgba(99, 102, 241, 0.05);
+            background: rgba(99, 102, 241, 0.08);
+            transform: translateY(-1px);
         }
 
         .upload-dropzone svg {
@@ -297,10 +396,23 @@
             font-weight: 600;
         }
 
+        .file-meta-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--primary-light);
+            margin-top: 6px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
         /* Algorithm Tab Switcher */
         .algo-tabs {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(3, 1fr);
             gap: 6px;
             background: var(--bg-input);
             padding: 4px;
@@ -309,8 +421,8 @@
         }
 
         .algo-tab {
-            padding: 8px 10px;
-            font-size: 12px;
+            padding: 8px 6px;
+            font-size: 11px;
             font-weight: 600;
             text-align: center;
             border: none;
@@ -319,6 +431,7 @@
             border-radius: var(--radius-sm);
             cursor: pointer;
             transition: var(--transition);
+            white-space: nowrap;
         }
 
         .algo-tab.active {
@@ -339,8 +452,8 @@
         .switch {
             position: relative;
             display: inline-block;
-            width: 38px;
-            height: 22px;
+            width: 36px;
+            height: 20px;
         }
 
         .switch input {
@@ -364,8 +477,8 @@
             content: "";
             height: 14px;
             width: 14px;
-            left: 3px;
-            bottom: 3px;
+            left: 2px;
+            bottom: 2px;
             background-color: var(--text-muted);
             transition: var(--transition);
             border-radius: 50%;
@@ -386,6 +499,8 @@
             display: flex;
             flex-direction: column;
             gap: 20px;
+            min-width: 0;
+            width: 100%;
         }
 
         .chart-panel {
@@ -401,7 +516,9 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 12px;
         }
 
         .chart-title h2 {
@@ -420,6 +537,7 @@
             gap: 16px;
             font-size: 12px;
             font-weight: 500;
+            flex-wrap: wrap;
         }
 
         .legend-item {
@@ -435,9 +553,89 @@
             border-radius: 50%;
         }
 
+        /* Multi-Change Point Navigator Strip */
+        .events-strip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .events-strip-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-subtle);
+            margin-right: 4px;
+        }
+
+        .event-chip {
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--bg-input);
+            color: var(--text-muted);
+        }
+
+        .event-chip:hover {
+            border-color: var(--primary);
+            color: var(--text-main);
+        }
+
+        .event-chip.active {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--primary);
+            color: white;
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .event-chip.chip-up {
+            border-left: 3px solid var(--rose);
+        }
+
+        .event-chip.chip-down {
+            border-left: 3px solid var(--emerald);
+        }
+
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: auto;
+        }
+
         #chart {
             width: 100%;
             height: 480px;
+        }
+
+        /* Comparison Matrix (Compare All Mode) */
+        .comparison-panel {
+            display: none;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+            margin-bottom: 20px;
+        }
+
+        .comparison-panel.visible {
+            display: block;
         }
 
         /* Impact Analysis Section */
@@ -480,7 +678,8 @@
         .impact-status {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            flex-wrap: wrap;
         }
 
         .severity-pill {
@@ -519,18 +718,40 @@
             border: 1px solid rgba(16, 185, 129, 0.35);
         }
 
+        .impact-body-layout {
+            display: grid;
+            grid-template-columns: 320px minmax(0, 1fr);
+            gap: 16px;
+            align-items: start;
+        }
+
+        @media (max-width: 980px) {
+            .impact-body-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .impact-kpis-pane {
+            display: flex;
+            flex-direction: column;
+        }
+
         .impact-stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 14px;
-            margin-bottom: 20px;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 0;
         }
 
         .kpi-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
-            padding: 16px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 82px;
         }
 
         .kpi-label {
@@ -539,32 +760,34 @@
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: var(--text-subtle);
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
 
         .kpi-value {
-            font-size: 22px;
+            font-size: 18px;
             font-weight: 800;
             font-family: 'JetBrains Mono', monospace;
             color: var(--text-main);
         }
 
         .kpi-sub {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
-            margin-top: 4px;
+            margin-top: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .val-up {
-            color: var(--rose);
-        }
+        .val-up { color: var(--rose); }
+        .val-down { color: var(--emerald); }
+        .val-neutral { color: var(--text-muted); }
 
-        .val-down {
-            color: var(--emerald);
-        }
-
-        .val-neutral {
-            color: var(--text-muted);
+        .impact-details-pane {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-width: 0;
         }
 
         /* Comparison Table */
@@ -572,27 +795,37 @@
             overflow-x: auto;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
+            background: var(--bg-card);
+            max-width: 100%;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px;
+            font-size: 12px;
+            text-align: right;
+        }
+
+        th, td {
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+            font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
+        }
+
+        th:first-child, td:first-child {
             text-align: left;
+            font-family: inherit;
         }
 
         th {
             background: rgba(30, 41, 59, 0.5);
-            padding: 12px 16px;
             font-weight: 600;
             color: var(--text-muted);
             border-bottom: 1px solid var(--border-color);
-        }
-
-        td {
-            padding: 12px 16px;
-            border-bottom: 1px solid rgba(30, 41, 59, 0.5);
-            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
         }
 
         tr:last-child td {
@@ -600,35 +833,135 @@
         }
 
         .narrative-box {
-            margin-top: 16px;
-            padding: 14px 18px;
+            margin-top: 0;
+            padding: 12px 16px;
             background: rgba(30, 41, 59, 0.4);
             border-left: 4px solid var(--primary);
             border-radius: var(--radius-sm);
-            font-size: 13px;
+            font-size: 12.5px;
             color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            line-height: 1.5;
         }
 
-        .narrative-box strong {
+        .narrative-text {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .narrative-text strong {
             color: var(--text-main);
         }
 
-        .empty-state {
-            text-align: center;
-            padding: 36px 20px;
-            color: var(--text-subtle);
+        /* Modal Styles */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
 
-        .empty-state svg {
-            width: 48px;
-            height: 48px;
-            fill: var(--text-subtle);
-            margin-bottom: 10px;
+        .modal-backdrop.open {
+            display: flex;
+        }
+
+        .modal-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 900px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-header h3 {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .modal-footer {
+            padding: 14px 24px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            background: rgba(30, 41, 59, 0.2);
+        }
+
+        /* Toast notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: var(--bg-card);
+            border: 1px solid var(--border-highlight);
+            color: var(--text-main);
+            padding: 12px 18px;
+            border-radius: var(--radius-md);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            pointer-events: auto;
+            animation: slideIn 0.25s ease-out;
+            transition: var(--transition);
+        }
+
+        .toast-success { border-color: rgba(16, 185, 129, 0.5); }
+        .toast-info { border-color: rgba(99, 102, 241, 0.5); }
+
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Error Notification Banner -->
+        <div class="error-banner" id="error-banner">
+            <span id="error-message">Error message</span>
+            <button onclick="dismissError()">✕</button>
+        </div>
+
         <!-- Header -->
         <header class="header">
             <div class="brand">
@@ -641,7 +974,32 @@
                 </div>
             </div>
 
-            <div class="header-meta">
+            <div class="header-actions">
+                <button class="btn btn-subtle" id="help-btn">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 16h-2v-2h2v2zm1.07-7.75l-.9.92C12.45 11.9 12 12.5 12 14h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
+                    Guide
+                </button>
+                <button class="btn" id="export-json-btn">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                    Export JSON
+                </button>
+                <button class="btn" id="export-png-btn">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                    Export PNG
+                </button>
+                <button class="btn" id="export-csv-btn">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                    Export CSV
+                </button>
+                <button class="btn btn-primary" id="save-db-btn" title="Persist current detection run and impact report to MySQL database">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                    Save to MySQL
+                </button>
+                <button class="btn" id="history-modal-btn" title="Browse and inspect past detection runs saved in MySQL database">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Run History
+                </button>
+                <span class="badge badge-live" id="db-badge" title="Database status">MySQL: patterntime</span>
                 <span class="badge badge-live" id="status-badge">Engine Ready</span>
             </div>
         </header>
@@ -650,26 +1008,35 @@
         <div class="workspace">
             <!-- Sidebar Controls -->
             <aside class="sidebar">
-                <!-- Dataset Selector -->
+                <!-- Data Source Panel -->
                 <section class="panel">
                     <div class="panel-title">
                         <span>1. Data Source</span>
-                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                        <button class="btn btn-subtle" id="preview-data-btn" onclick="openPreviewModal()" style="padding: 3px 8px; font-size: 11px;">
+                            Preview Data
+                        </button>
                     </div>
 
                     <div class="form-group">
-                        <label for="dataset-select">Benchmark Dataset</label>
+                        <label for="dataset-select">Active Dataset</label>
                         <select id="dataset-select">
-                            <option value="sample_api_metrics.csv">Sample API Metrics (Original)</option>
-                            <option value="user_activities.csv">CakePHP API Activities (9,081 Real Logs)</option>
-                            <option value="custom_test_upload.csv">Server Telemetry (CPU, Memory, Conn)</option>
-                            <option value="no_change_metrics.csv">No-Change Baseline (Clean)</option>
-                            <option value="change_size_30ms.csv">Small Change (+30 ms shift)</option>
-                            <option value="change_size_70ms.csv">Medium Change (+70 ms shift)</option>
-                            <option value="change_size_150ms.csv">Large Change (+150 ms shift)</option>
-                            <option value="scenario_high_noise.csv">High Noise (σ=30ms, +70ms)</option>
-                            <option value="scenario_transient_spikes.csv">Transient Spikes (Outliers)</option>
-                            <option value="scenario_gradual_drift.csv">Gradual Drift (Memory Leak)</option>
+                            <optgroup label="Synthetic Stress Scenarios">
+                                <option value="sample_api_metrics.csv" selected>Sample API Metrics (Original)</option>
+                                <option value="no_change_metrics.csv">No-Change Baseline (Clean)</option>
+                                <option value="change_size_30ms.csv">Small Change (+30 ms shift)</option>
+                                <option value="change_size_70ms.csv">Medium Change (+70 ms shift)</option>
+                                <option value="change_size_150ms.csv">Large Change (+150 ms shift)</option>
+                                <option value="scenario_high_noise.csv">High Noise (σ=30ms, +70ms)</option>
+                                <option value="scenario_transient_spikes.csv">Transient Spikes (Outliers)</option>
+                                <option value="scenario_gradual_drift.csv">Gradual Drift (Memory Leak)</option>
+                            </optgroup>
+                            <optgroup label="Real-World Telemetry">
+                                <option value="user_activities.csv">CakePHP API Activities (9,081 Real Logs)</option>
+                                <option value="custom_test_upload.csv">Server Telemetry (CPU, Memory, Connections)</option>
+                            </optgroup>
+                            <optgroup label="Custom Uploads" id="custom-uploads-group">
+                                <!-- Appended dynamically -->
+                            </optgroup>
                         </select>
                     </div>
 
@@ -679,7 +1046,15 @@
                             <input type="file" id="file-input" accept=".csv" style="display: none;">
                             <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
                             <p><span>Browse file</span> or drag & drop CSV</p>
+                            <p style="font-size: 11px; color: var(--text-subtle); margin-top: 2px;">Supports CakePHP logs, RFC 4180 CSV, headers or headerless</p>
                         </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="timestamp-select">Timestamp Column</label>
+                        <select id="timestamp-select">
+                            <!-- Populated dynamically based on CSV columns -->
+                        </select>
                     </div>
 
                     <div class="form-group">
@@ -688,12 +1063,38 @@
                             <!-- Populated dynamically based on CSV columns -->
                         </select>
                     </div>
+
+                    <!-- Dynamic Endpoint / Dimension Filter -->
+                    <div class="form-group" id="dimension-filter-group" style="display: none;">
+                        <label for="dimension-select">Filter by Endpoint / Route</label>
+                        <select id="dimension-select">
+                            <option value="__all__">All Endpoints (Entire Series)</option>
+                        </select>
+                    </div>
+
+                    <!-- Preprocessing Controls -->
+                    <div class="toggle-group" style="margin-top: 6px;">
+                        <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Sort Chronologically</span>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-sort" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label for="smoothing-select">Curve Smoothing / Trend</label>
+                        <select id="smoothing-select">
+                            <option value="raw">Raw Data (Unsmoothed)</option>
+                            <option value="ma5">5-Period Moving Average</option>
+                            <option value="ma15">15-Period Moving Average</option>
+                        </select>
+                    </div>
                 </section>
 
                 <!-- Algorithm & Tuning Panel -->
                 <section class="panel">
                     <div class="panel-title">
-                        <span>2. Detection Algorithm</span>
+                        <span>2. Detection Engine</span>
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
                     </div>
 
@@ -702,6 +1103,7 @@
                         <button class="algo-tab" data-algo="cusum">CUSUM</button>
                         <button class="algo-tab" data-algo="robust_cusum">Robust CUSUM</button>
                         <button class="algo-tab active" data-algo="ewma">EWMA</button>
+                        <button class="algo-tab" data-algo="compare_all" style="grid-column: span 2; background: rgba(99, 102, 241, 0.15); color: var(--primary-light);">⚡ Compare All 4</button>
                     </div>
 
                     <!-- Dynamic Algorithm Parameter Controls -->
@@ -719,9 +1121,17 @@
                     </div>
 
                     <div class="toggle-group">
-                        <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Show Pre/Post Means</span>
+                        <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Show Pre/Post Regimes</span>
                         <label class="switch">
                             <input type="checkbox" id="toggle-means" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-group">
+                        <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Highlight Outlier Spikes</span>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-outliers" checked>
                             <span class="slider"></span>
                         </label>
                     </div>
@@ -735,7 +1145,7 @@
                     <div class="chart-header">
                         <div class="chart-title">
                             <h2 id="chart-heading">Metric Series Over Time</h2>
-                            <p id="chart-subheading">120 observations loaded</p>
+                            <p id="chart-subheading">Loading observations...</p>
                         </div>
 
                         <div class="chart-legend">
@@ -743,9 +1153,13 @@
                                 <span class="legend-dot" style="background: var(--primary);"></span>
                                 <span>Metric Value</span>
                             </div>
+                            <div class="legend-item" id="legend-trend" style="display: none;">
+                                <span class="legend-dot" style="background: var(--amber);"></span>
+                                <span>Moving Average</span>
+                            </div>
                             <div class="legend-item">
                                 <span class="legend-dot" style="background: var(--rose);"></span>
-                                <span>Detected Change</span>
+                                <span>Detected Shift</span>
                             </div>
                             <div class="legend-item">
                                 <span class="legend-dot" style="background: var(--cyan);"></span>
@@ -754,7 +1168,45 @@
                         </div>
                     </div>
 
+                    <!-- Multi-Change Navigator Strip -->
+                    <div class="events-strip" id="events-strip">
+                        <span class="events-strip-title">Detected Shifts:</span>
+                        <div id="events-chips-container" style="display: flex; gap: 6px; align-items: center;">
+                            <span style="font-size: 11px; color: var(--text-subtle);">None detected</span>
+                        </div>
+                        <div class="zoom-controls">
+                            <button class="btn btn-subtle" id="zoom-all-btn" style="padding: 3px 8px; font-size: 11px;">Reset Zoom</button>
+                            <button class="btn btn-subtle" id="zoom-change-btn" style="padding: 3px 8px; font-size: 11px;">Focus Shift</button>
+                        </div>
+                    </div>
+
                     <div id="chart"></div>
+                </section>
+
+                <!-- Comparison Panel (Shown when 'Compare All 4' tab is selected) -->
+                <section class="comparison-panel" id="comparison-panel">
+                    <div class="panel-title">
+                        <span>Algorithm Comparison Matrix</span>
+                        <span class="badge badge-live" id="consensus-badge">Consensus Active</span>
+                    </div>
+                    <div class="stats-table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Detector</th>
+                                    <th>Type</th>
+                                    <th>Detections</th>
+                                    <th>First Shift Point</th>
+                                    <th>Timestamp</th>
+                                    <th>Resilience / Notes</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="comparison-table-body">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
                 </section>
 
                 <!-- Impact Analysis Report -->
@@ -763,81 +1215,243 @@
                         <div class="impact-status">
                             <span class="severity-pill pill-critical" id="severity-badge">Critical Shift</span>
                             <span style="font-size: 13px; font-weight: 600; color: var(--text-muted);" id="impact-subtitle">
-                                Change point detected at observation #72
+                                Change point detected
                             </span>
                         </div>
                         <div style="font-size: 12px; color: var(--text-subtle);" id="stat-sig-tag">
-                            Welch's t-test: p < 0.001 (Statistically Significant)
+                            Welch's t-test / Cohen's d Significance
                         </div>
                     </div>
 
-                    <div class="impact-stats-grid" id="kpi-grid">
-                        <div class="kpi-card">
-                            <div class="kpi-label">Pre-Change Mean</div>
-                            <div class="kpi-value" id="kpi-before">180.22</div>
-                            <div class="kpi-sub val-neutral" id="kpi-before-sub">Baseline window</div>
+                    <div class="impact-body-layout">
+                        <!-- Left: 4 KPI Cards in a balanced 2x2 grid -->
+                        <div class="impact-kpis-pane">
+                            <div class="impact-stats-grid" id="kpi-grid">
+                                <div class="kpi-card">
+                                    <div class="kpi-label">Pre Baseline (μ)</div>
+                                    <div class="kpi-value" id="kpi-before">0.00</div>
+                                    <div class="kpi-sub val-neutral" id="kpi-before-sub">Baseline window</div>
+                                </div>
+
+                                <div class="kpi-card">
+                                    <div class="kpi-label">Post Mean (μ)</div>
+                                    <div class="kpi-value" id="kpi-after">0.00</div>
+                                    <div class="kpi-sub val-up" id="kpi-after-sub">+0.00 (+0.0%)</div>
+                                </div>
+
+                                <div class="kpi-card">
+                                    <div class="kpi-label">Cohen's d</div>
+                                    <div class="kpi-value" id="kpi-cohen">d = 0.00</div>
+                                    <div class="kpi-sub val-neutral" id="kpi-cohen-sub">Negligible</div>
+                                </div>
+
+                                <div class="kpi-card">
+                                    <div class="kpi-label">Detection Latency</div>
+                                    <div class="kpi-value" id="kpi-latency">0.0 steps</div>
+                                    <div class="kpi-sub val-neutral" id="kpi-latency-sub">Detection step</div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="kpi-card">
-                            <div class="kpi-label">Post-Change Mean</div>
-                            <div class="kpi-value" id="kpi-after">428.16</div>
-                            <div class="kpi-sub val-up" id="kpi-after-sub">+247.94 ms (+137.6%)</div>
+                        <!-- Right: Statistical comparison table + Narrative box -->
+                        <div class="impact-details-pane">
+                            <div class="stats-table-wrapper">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Regime</th>
+                                            <th>N</th>
+                                            <th>Mean (μ)</th>
+                                            <th>Std Dev (σ)</th>
+                                            <th>Median</th>
+                                            <th>Min</th>
+                                            <th>Max</th>
+                                            <th>IQR</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="stats-table-body">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="narrative-box">
+                                <div class="narrative-text" id="narrative-text">
+                                    <strong>Impact Summary:</strong> Analyzing time series...
+                                </div>
+                                <button class="btn btn-subtle" id="copy-summary-btn" style="padding: 4px 10px; font-size: 11px; white-space: nowrap;">
+                                    Copy Summary
+                                </button>
+                            </div>
                         </div>
-
-                        <div class="kpi-card">
-                            <div class="kpi-label">Effect Size (Cohen's d)</div>
-                            <div class="kpi-value" id="kpi-cohen">d = 31.72</div>
-                            <div class="kpi-sub val-up" id="kpi-cohen-sub">Huge Shift</div>
-                        </div>
-
-                        <div class="kpi-card">
-                            <div class="kpi-label">Detection Latency</div>
-                            <div class="kpi-value" id="kpi-latency">0.0 min</div>
-                            <div class="kpi-sub val-neutral" id="kpi-latency-sub">Exact Index #72</div>
-                        </div>
-                    </div>
-
-                    <!-- Comparison Table -->
-                    <div class="stats-table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Regime</th>
-                                    <th>Obs</th>
-                                    <th>Mean</th>
-                                    <th>Std Dev</th>
-                                    <th>Median</th>
-                                    <th>Min</th>
-                                    <th>Max</th>
-                                    <th>IQR</th>
-                                </tr>
-                            </thead>
-                            <tbody id="stats-table-body">
-                                <!-- Populated dynamically -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="narrative-box" id="narrative-text">
-                        <strong>Impact Summary:</strong> Response time surged by +247.94 ms (+137.6%) after observation #72.
                     </div>
                 </section>
             </main>
         </div>
     </div>
 
+    <!-- Data Preview Modal -->
+    <div class="modal-backdrop" id="preview-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="preview-modal-title">CSV Data Inspector & Health Check</h3>
+                <button class="btn btn-subtle" onclick="closePreviewModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <div class="file-meta-pill" id="preview-meta-rows">Total Rows: 0</div>
+                    <div class="file-meta-pill" id="preview-meta-cols">Total Columns: 0</div>
+                    <div class="file-meta-pill" id="preview-meta-ts">Timestamp: -</div>
+                    <div class="file-meta-pill" id="preview-meta-cadence">Estimated Cadence: -</div>
+                </div>
+
+                <div class="stats-table-wrapper">
+                    <table>
+                        <thead id="preview-table-head"></thead>
+                        <tbody id="preview-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closePreviewModal()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help & Guide Modal -->
+    <div class="modal-backdrop" id="help-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>PatternTime User Guide & Methodology</h3>
+                <button class="btn btn-subtle" onclick="closeHelpModal()">✕</button>
+            </div>
+            <div class="modal-body" style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">
+                <p><strong style="color:var(--text-main);">PatternTime</strong> is a locally running AI/ML time-series investigation laboratory designed to ingest application logs and metrics, detect structural change points, and measure statistical impact.</p>
+                <br>
+                <h4 style="color:var(--text-main);">Algorithms Available:</h4>
+                <ul style="margin-left: 20px; margin-top: 6px;">
+                    <li><strong>Sliding Window:</strong> Compares means between two consecutive sliding windows. Best for abrupt step changes.</li>
+                    <li><strong>CUSUM (Cumulative Sum):</strong> Tracks cumulative standardized deviations above baseline. Best for detecting persistent drift.</li>
+                    <li><strong>Robust CUSUM:</strong> Incorporates Winsorization outlier clipping (clips observations with $|z| > \text{clip\_z}$). Immune to transient single-request spikes.</li>
+                    <li><strong>EWMA (Exponentially Weighted Moving Average):</strong> Applies recursive exponential smoothing with time-varying control limits. Ideal for early detection of sustained shifts.</li>
+                    <li><strong>Compare All:</strong> Evaluates all 4 algorithms concurrently to provide a consensus scorecard.</li>
+                </ul>
+                <br>
+                <h4 style="color:var(--text-main);">Statistical Effect Size (Cohen's d):</h4>
+                <p>Calculated as $d = (\mu_{\text{post}} - \mu_{\text{pre}}) / \sigma_{\text{pooled}}$. Categorized as Negligible ($< 0.2$), Low ($0.2-0.5$), Moderate ($0.5-1.0$), High ($1.0-2.5$), or Critical ($> 2.5$).</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeHelpModal()">Got It</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MySQL Historical Runs Modal -->
+    <div class="modal-backdrop" id="history-modal">
+        <div class="modal-card" style="max-width: 1050px; height: 85vh;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); display: flex; align-items: center; justify-content: center; color: var(--primary-light);">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 16px;">MySQL Run History & Audit Trail</h3>
+                        <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Inspect, reload, and verify past change detection runs stored in database <code>patterntime</code></p>
+                    </div>
+                </div>
+                <button class="btn btn-subtle" onclick="closeHistoryModal()" style="padding: 4px 10px; font-size: 16px;">✕</button>
+            </div>
+
+            <div class="modal-body" style="gap: 16px;">
+                <!-- Filter Bar -->
+                <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 10px; align-items: center; flex: 1; min-width: 300px;">
+                        <input type="text" id="history-search" class="input" placeholder="Search dataset or metric..." style="flex: 1; padding: 7px 12px; font-size: 13px; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm);">
+                        <select id="history-dataset-filter" style="padding: 7px 12px; font-size: 13px; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm); max-width: 200px;">
+                            <option value="">All Datasets</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-subtle" id="history-refresh-btn" style="padding: 7px 14px; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        Refresh Runs
+                    </button>
+                </div>
+
+                <!-- Run Details Drawer / Inspector (when a run is selected) -->
+                <div id="history-detail-panel" style="display: none; background: rgba(30, 41, 59, 0.4); border: 1px solid var(--primary-glow); border-radius: var(--radius-md); padding: 18px; margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="badge badge-live" id="detail-run-id">Run #0</span>
+                            <span style="font-weight: 600; color: var(--text-main);" id="detail-run-title">Dataset - Metric</span>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-primary" id="detail-overlay-btn" style="font-size: 12px; padding: 5px 12px;" title="Overlay detected change points on current chart">Overlay on Active Chart</button>
+                            <button class="btn btn-subtle" id="detail-json-btn" style="font-size: 12px; padding: 5px 12px;">Export JSON</button>
+                            <button class="btn btn-subtle" onclick="closeHistoryDetail()" style="padding: 5px 10px; font-size: 12px;">✕ Close</button>
+                        </div>
+                    </div>
+                    <div id="detail-content-area" style="font-size: 13px;">
+                        <!-- Dynamically filled with run parameters, events list, and statistical impact -->
+                    </div>
+                </div>
+
+                <!-- Runs Table List -->
+                <div class="stats-table-wrapper" style="max-height: 440px; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <th style="padding: 10px 14px;">Run ID</th>
+                                <th style="padding: 10px 14px;">Dataset</th>
+                                <th style="padding: 10px 14px;">Metric</th>
+                                <th style="padding: 10px 14px;">Algorithm</th>
+                                <th style="padding: 10px 14px;">Events</th>
+                                <th style="padding: 10px 14px;">Impact / Severity</th>
+                                <th style="padding: 10px 14px;">Saved At</th>
+                                <th style="padding: 10px 14px; text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body">
+                            <!-- Rows injected dynamically -->
+                        </tbody>
+                    </table>
+                    <div id="history-empty-state" style="display: none; padding: 40px; text-align: center; color: var(--text-muted);">
+                        <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin: 0 auto 12px; opacity: 0.4;"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                        <p style="font-weight: 500; font-size: 14px; color: var(--text-main); margin-bottom: 4px;">No Saved Runs Found</p>
+                        <p style="font-size: 12px;">Run a change detection in the workbench and click <strong>"Save to MySQL"</strong> or run <code>patterntime detect ... --save</code> via CLI.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                <span id="history-status-indicator" style="font-size: 12px; color: var(--text-muted);">Connecting to MySQL...</span>
+                <button class="btn btn-primary" onclick="closeHistoryModal()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div class="toast-container" id="toast-container"></div>
+
     <!-- Interactive Script -->
     <script>
         // State
-        let rawRows = [];
+        const uploadedFilesMap = {}; // In-memory cache for user-uploaded CSV files
         let currentDatasetName = "sample_api_metrics.csv";
+        let rawDataset = []; // All parsed rows from the CSV
+        let filteredDataset = []; // Rows after filtering and sorting
         let timestamps = [];
-        let dataset = [];
         let numericColumns = [];
+        let timestampColumns = [];
+        let dimensionColumns = [];
+        let selectedTimestamp = "";
         let selectedMetric = "";
+        let selectedDimension = "__all__";
         let groundTruthIndex = -1;
         let activeAlgorithm = "ewma"; // Default to EWMA
         let detectedEvents = [];
+        let activeEventIndex = 0; // Currently focused event in multi-change strip
+        let lastReportData = null; // For JSON export
+        let allDetectorResults = {}; // For compare all mode
 
         // Algorithm configurations
         const algoConfigs = {
@@ -849,17 +1463,105 @@
 
         // DOM elements
         const datasetSelect = document.getElementById("dataset-select");
+        const timestampSelect = document.getElementById("timestamp-select");
         const metricSelect = document.getElementById("metric-select");
+        const dimensionGroup = document.getElementById("dimension-filter-group");
+        const dimensionSelect = document.getElementById("dimension-select");
+        const smoothingSelect = document.getElementById("smoothing-select");
+        const toggleSort = document.getElementById("toggle-sort");
         const paramControls = document.getElementById("param-controls");
         const dropzone = document.getElementById("dropzone");
         const fileInput = document.getElementById("file-input");
         const chartElement = document.getElementById("chart");
         const toggleTruth = document.getElementById("toggle-truth");
         const toggleMeans = document.getElementById("toggle-means");
+        const toggleOutliers = document.getElementById("toggle-outliers");
+        const exportJsonBtn = document.getElementById("export-json-btn");
+        const exportPngBtn = document.getElementById("export-png-btn");
+        const exportCsvBtn = document.getElementById("export-csv-btn");
+        const copySummaryBtn = document.getElementById("copy-summary-btn");
+        const helpBtn = document.getElementById("help-btn");
+        const previewDataBtn = document.getElementById("preview-data-btn");
+        const statusBadge = document.getElementById("status-badge");
+        const errorBanner = document.getElementById("error-banner");
+        const errorMessage = document.getElementById("error-message");
+        const eventsChipsContainer = document.getElementById("events-chips-container");
+        const comparisonPanel = document.getElementById("comparison-panel");
+        const zoomAllBtn = document.getElementById("zoom-all-btn");
+        const zoomChangeBtn = document.getElementById("zoom-change-btn");
 
-        // Initialize ECharts
+        // Initialize ECharts with responsive resize
         const chart = echarts.init(chartElement);
         window.addEventListener("resize", () => chart.resize());
+
+        // Toast feedback
+        function showToast(msg, type = "info") {
+            const container = document.getElementById("toast-container");
+            const toast = document.createElement("div");
+            toast.className = `toast toast-${type}`;
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = "0";
+                toast.style.transform = "translateY(10px)";
+                setTimeout(() => toast.remove(), 250);
+            }, 3000);
+        }
+
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            errorBanner.classList.add("visible");
+            statusBadge.className = "badge badge-error";
+            statusBadge.textContent = "Error";
+        }
+
+        function dismissError() {
+            errorBanner.classList.remove("visible");
+        }
+
+        // Modal Helpers
+        window.openPreviewModal = function() {
+            document.getElementById("preview-modal").classList.add("open");
+        };
+        window.closePreviewModal = function() {
+            document.getElementById("preview-modal").classList.remove("open");
+        };
+        window.openHelpModal = function() {
+            document.getElementById("help-modal").classList.add("open");
+        };
+        window.closeHelpModal = function() {
+            document.getElementById("help-modal").classList.remove("open");
+        };
+        window.openHistoryModal = function() {
+            document.getElementById("history-modal").classList.add("open");
+            if (typeof window.loadHistoryRuns === "function") {
+                window.loadHistoryRuns();
+            }
+        };
+        window.closeHistoryModal = function() {
+            document.getElementById("history-modal").classList.remove("open");
+        };
+        window.closeHistoryDetail = function() {
+            const panel = document.getElementById("history-detail-panel");
+            if (panel) panel.style.display = "none";
+        };
+
+        const historyModalBtn = document.getElementById("history-modal-btn");
+        if (historyModalBtn) {
+            historyModalBtn.addEventListener("click", window.openHistoryModal);
+        }
+        helpBtn.addEventListener("click", window.openHelpModal);
+        previewDataBtn.addEventListener("click", window.openPreviewModal);
+
+        document.getElementById("preview-modal").addEventListener("click", e => {
+            if (e.target.id === "preview-modal") window.closePreviewModal();
+        });
+        document.getElementById("help-modal").addEventListener("click", e => {
+            if (e.target.id === "help-modal") window.closeHelpModal();
+        });
+        document.getElementById("history-modal").addEventListener("click", e => {
+            if (e.target.id === "history-modal") window.closeHistoryModal();
+        });
 
         // -------------------------------------------------------------
         // Math & Statistical Helpers
@@ -926,8 +1628,27 @@
             return { d, category };
         }
 
+        function computeMovingAverage(values, windowSize) {
+            const result = [];
+            for (let i = 0; i < values.length; i++) {
+                const start = Math.max(0, i - windowSize + 1);
+                const subset = values.slice(start, i + 1);
+                result.push(mean(subset));
+            }
+            return result;
+        }
+
+        // Clean number representation (handles commas, $, %, etc.)
+        function cleanNumber(val) {
+            if (typeof val === "number") return val;
+            if (val === null || val === undefined) return NaN;
+            const str = String(val).trim().replace(/,/g, '').replace(/[$%]/g, '');
+            if (str === "" || str.toLowerCase() === "null" || str.toLowerCase() === "nan") return NaN;
+            return Number(str);
+        }
+
         // -------------------------------------------------------------
-        // Client-side Detection Algorithms (matching Python engine)
+        // Detection Algorithms (parity with Python patterntime package)
         // -------------------------------------------------------------
         function runSlidingWindow(values, cfg) {
             const { window_size, threshold } = cfg;
@@ -938,7 +1659,7 @@
                 const recent = values.slice(i, i + window_size);
                 const diff = mean(recent) - mean(earlier);
                 if (Math.abs(diff) >= threshold) {
-                    candidates.push({ index: i, diff, direction: diff > 0 ? "up" : "down" });
+                    candidates.push({ index: i, diff, score: Math.abs(diff), direction: diff > 0 ? "up" : "down" });
                 }
             }
             if (!candidates.length) return [];
@@ -1049,8 +1770,53 @@
             return events;
         }
 
+        // Run all 4 detectors concurrently for the consensus matrix
+        function runCompareAll(values) {
+            const t0 = performance.now();
+            const results = {};
+
+            const tSw0 = performance.now();
+            results.sliding_window = {
+                events: runSlidingWindow(values, algoConfigs.sliding_window),
+                latencyMs: (performance.now() - tSw0).toFixed(1),
+                name: "Sliding Window",
+                type: "Window Means",
+                resilience: "Sensitive to abrupt jumps, affected by noise"
+            };
+
+            const tCu0 = performance.now();
+            results.cusum = {
+                events: runCusum(values, algoConfigs.cusum),
+                latencyMs: (performance.now() - tCu0).toFixed(1),
+                name: "Classic CUSUM",
+                type: "Cumulative Drift",
+                resilience: "Detects persistent drift, sensitive to single spikes"
+            };
+
+            const tRcu0 = performance.now();
+            results.robust_cusum = {
+                events: runCusum(values, algoConfigs.robust_cusum),
+                latencyMs: (performance.now() - tRcu0).toFixed(1),
+                name: "Robust CUSUM",
+                type: "Winsorized CUSUM",
+                resilience: "Resilient to transient outlier spikes (clip z=4.0)"
+            };
+
+            const tEw0 = performance.now();
+            results.ewma = {
+                events: runEWMA(values, algoConfigs.ewma),
+                latencyMs: (performance.now() - tEw0).toFixed(1),
+                name: "EWMA Control",
+                type: "Dynamic Limits",
+                resilience: "Fast detection of sustained shifts, robust variance limits"
+            };
+
+            results.totalMs = (performance.now() - t0).toFixed(1);
+            return results;
+        }
+
         // -------------------------------------------------------------
-        // CSV Parsing & Data Loading (PapaParse with CakePHP & Headerless Support)
+        // CSV Parsing & Data Loading
         // -------------------------------------------------------------
         function parseCSV(text) {
             let dataRows = [];
@@ -1058,18 +1824,18 @@
 
             if (typeof Papa !== "undefined") {
                 const parsed = Papa.parse(text, { skipEmptyLines: true });
-                if (!parsed.data || parsed.data.length < 2) throw new Error("CSV has insufficient rows");
-                
+                if (!parsed.data || parsed.data.length < 2) {
+                    throw new Error("CSV has fewer than 2 rows.");
+                }
+
                 const rawRow0 = parsed.data[0];
-                // Check if row 0 is actually data rather than header names:
-                // If col 0 is a number, or if any cell is a date like '2026-09-16'
+                // Detect if row 0 is data (e.g. CakePHP headerless export)
                 const looksLikeData = !isNaN(Number(rawRow0[0])) || rawRow0.some(c => /^\d{4}-\d{2}-\d{2}/.test(String(c).trim()));
 
                 if (looksLikeData) {
                     dataRows = parsed.data;
                     const colCount = rawRow0.length;
                     if (colCount === 16) {
-                        // Standard CakePHP API activities log schema
                         headers = [
                             "id", "user_id", "api_name", "action", "client",
                             "request_params", "response", "status_code", "url",
@@ -1096,7 +1862,7 @@
 
             // Fallback manual parser
             const lines = text.trim().split(/\r?\n/);
-            if (lines.length < 2) throw new Error("CSV has insufficient rows");
+            if (lines.length < 2) throw new Error("CSV has fewer than 2 rows.");
             headers = lines[0].split(",").map(h => h.trim().replace(/^["']|["']$/g, ''));
             const rows = [];
             for (let i = 1; i < lines.length; i++) {
@@ -1112,67 +1878,103 @@
 
         async function loadDataset(filename) {
             try {
-                document.getElementById("status-badge").textContent = "Loading...";
+                dismissError();
+                statusBadge.className = "badge badge-loading";
+                statusBadge.textContent = "Loading...";
+
+                // Check in-memory uploaded cache first
+                if (uploadedFilesMap[filename]) {
+                    processCSVData(uploadedFilesMap[filename], filename);
+                    return;
+                }
+
                 const res = await fetch(`../data/${filename}`);
-                if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+                if (!res.ok) throw new Error(`Could not fetch ../data/${filename} (${res.status})`);
                 const text = await res.text();
                 processCSVData(text, filename);
             } catch (err) {
                 console.error("Load failed:", err);
-                document.getElementById("status-badge").textContent = "Error";
+                showError(`Failed to load dataset: ${err.message}`);
             }
         }
 
         function processCSVData(csvText, name) {
-            const { headers, rows } = parseCSV(csvText);
+            try {
+                dismissError();
+                const { headers, rows } = parseCSV(csvText);
 
-            // Find timestamp column (look for created, timestamp, datetime, date, ts)
-            const tsCol = headers.find(h => [
-                "created", "timestamp", "datetime", "date", "time", "ts", "recorded_at"
-            ].includes(h.toLowerCase())) || headers[headers.length - 1];
+                if (!rows.length) {
+                    throw new Error("No data records found in CSV.");
+                }
 
-            // Filter numeric columns
-            numericColumns = headers.filter(h => {
-                if (["id", "user_id", "status_code", "is_after_change", "anomaly", "label"].includes(h.toLowerCase())) return false;
-                // Test if column has numeric values across sample
-                const validNumbers = rows.slice(0, 30).map(r => Number(r[h])).filter(v => !isNaN(v) && v !== null && v !== 0);
-                return validNumbers.length >= 3;
+                // 1. Identify timestamp columns
+                timestampColumns = headers.filter(h => {
+                    const low = h.toLowerCase();
+                    return ["created", "timestamp", "datetime", "date", "time", "ts", "recorded_at"].includes(low) ||
+                           rows.slice(0, 10).some(r => /^\d{4}-\d{2}-\d{2}/.test(String(r[h]).trim()));
+                });
+
+                if (!timestampColumns.length) {
+                    timestampColumns = [headers[headers.length - 1]]; // Default to last column
+                }
+
+                selectedTimestamp = timestampColumns[0];
+
+                // 2. Identify numeric metric columns
+                numericColumns = headers.filter(h => {
+                    const low = h.toLowerCase();
+                    if (["id", "user_id", "status_code", "is_after_change", "anomaly", "label"].includes(low)) return false;
+                    const sample = rows.slice(0, 50).map(r => cleanNumber(r[h])).filter(v => !isNaN(v));
+                    return sample.length >= 3;
+                });
+
+                // Prioritize execution_time / latency if available
+                const priorityMetric = numericColumns.find(c => 
+                    c.toLowerCase().includes("execution_time") || 
+                    c.toLowerCase().includes("response_time") || 
+                    c.toLowerCase().includes("latency") ||
+                    c.toLowerCase().includes("metric")
+                );
+                if (priorityMetric) {
+                    numericColumns = [priorityMetric, ...numericColumns.filter(c => c !== priorityMetric)];
+                }
+
+                if (!numericColumns.length) {
+                    throw new Error("Could not detect numeric metric columns in this CSV.");
+                }
+
+                selectedMetric = numericColumns[0];
+
+                // 3. Identify categorical dimension columns (e.g. api_name, action, client)
+                dimensionColumns = headers.filter(h => {
+                    const low = h.toLowerCase();
+                    return ["api_name", "action", "endpoint", "client", "route", "service"].includes(low);
+                });
+
+                rawDataset = rows;
+                updateDropdownSelectors();
+                setupDimensionFilter(rows);
+                updateDataPreviewModal(headers, rows);
+                applyFilterAndRender(name);
+
+            } catch (err) {
+                console.error("Processing error:", err);
+                showError(err.message);
+            }
+        }
+
+        function updateDropdownSelectors() {
+            // Timestamp dropdown
+            timestampSelect.innerHTML = "";
+            timestampColumns.forEach(col => {
+                const opt = document.createElement("option");
+                opt.value = col;
+                opt.textContent = col.replace(/_/g, " ").toUpperCase();
+                timestampSelect.appendChild(opt);
             });
+            timestampSelect.value = selectedTimestamp;
 
-            // Prioritize execution_time or latency if present
-            const priorityMetric = numericColumns.find(c => 
-                c.toLowerCase().includes("execution_time") || 
-                c.toLowerCase().includes("response_time") || 
-                c.toLowerCase().includes("latency")
-            );
-            if (priorityMetric) {
-                numericColumns = [priorityMetric, ...numericColumns.filter(c => c !== priorityMetric)];
-            }
-
-            if (!numericColumns.length) {
-                alert("No numeric metrics found in this CSV to analyze.");
-                return;
-            }
-
-            selectedMetric = numericColumns[0];
-
-            // Filter dataset to rows where selected metric and timestamp are valid
-            const cleanRows = rows.filter(r => {
-                const v = Number(r[selectedMetric]);
-                return !isNaN(v) && r[selectedMetric] !== "" && r[selectedMetric] !== "NULL" && r[tsCol] && r[tsCol] !== "NULL";
-            });
-
-            dataset = cleanRows;
-            timestamps = cleanRows.map(r => r[tsCol]);
-
-            // Find ground truth index if available
-            groundTruthIndex = -1;
-            const flagCol = headers.find(h => ["is_after_change", "anomaly", "label"].includes(h.toLowerCase()));
-            if (flagCol) {
-                groundTruthIndex = cleanRows.findIndex(r => Number(r[flagCol]) === 1);
-            }
-
-            // Populate metric selector
+            // Metric dropdown
             metricSelect.innerHTML = "";
             numericColumns.forEach(col => {
                 const opt = document.createElement("option");
@@ -1180,31 +1982,137 @@
                 opt.textContent = col.replace(/_/g, " ").toUpperCase();
                 metricSelect.appendChild(opt);
             });
-
             metricSelect.value = selectedMetric;
-            document.getElementById("chart-subheading").textContent = `${cleanRows.length} valid observations loaded from ${name}`;
-            document.getElementById("status-badge").textContent = "Analysis Active";
+        }
 
+        function setupDimensionFilter(rows) {
+            dimensionSelect.innerHTML = `<option value="__all__">All Endpoints (Entire Series)</option>`;
+
+            if (dimensionColumns.length > 0) {
+                const dimCol = dimensionColumns[0];
+                const uniqueVals = [...new Set(rows.map(r => r[dimCol]).filter(Boolean))].slice(0, 40);
+
+                if (uniqueVals.length > 1) {
+                    uniqueVals.sort().forEach(val => {
+                        const opt = document.createElement("option");
+                        opt.value = val;
+                        opt.textContent = `${val} (${rows.filter(r => r[dimCol] === val).length} calls)`;
+                        dimensionSelect.appendChild(opt);
+                    });
+                    dimensionGroup.style.display = "flex";
+                    return;
+                }
+            }
+            dimensionGroup.style.display = "none";
+        }
+
+        function updateDataPreviewModal(headers, rows) {
+            document.getElementById("preview-meta-rows").textContent = `Total Rows: ${rows.length.toLocaleString()}`;
+            document.getElementById("preview-meta-cols").textContent = `Total Columns: ${headers.length}`;
+            document.getElementById("preview-meta-ts").textContent = `Timestamp: ${selectedTimestamp}`;
+
+            const thead = document.getElementById("preview-table-head");
+            const tbody = document.getElementById("preview-table-body");
+
+            thead.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+            tbody.innerHTML = rows.slice(0, 6).map(r => 
+                `<tr>${headers.map(h => `<td>${r[h] !== undefined ? String(r[h]).slice(0, 40) : ''}</td>`).join('')}</tr>`
+            ).join('');
+        }
+
+        function applyFilterAndRender(name) {
+            const dimCol = dimensionColumns.length ? dimensionColumns[0] : null;
+
+            let filtered = rawDataset;
+            if (dimCol && selectedDimension !== "__all__") {
+                filtered = rawDataset.filter(r => r[dimCol] === selectedDimension);
+            }
+
+            // Filter out rows missing metric or timestamp
+            let cleanRows = filtered.filter(r => {
+                const v = cleanNumber(r[selectedMetric]);
+                return !isNaN(v) && r[selectedTimestamp] && r[selectedTimestamp] !== "NULL";
+            });
+
+            if (!cleanRows.length) {
+                showError(`No valid observations found for metric '${selectedMetric}'.`);
+                return;
+            }
+
+            // Optional chronological sorting
+            if (toggleSort.checked) {
+                cleanRows.sort((a, b) => {
+                    const da = new Date(a[selectedTimestamp]).getTime();
+                    const db = new Date(b[selectedTimestamp]).getTime();
+                    if (!isNaN(da) && !isNaN(db)) return da - db;
+                    return 0;
+                });
+            }
+
+            filteredDataset = cleanRows;
+            timestamps = cleanRows.map(r => r[selectedTimestamp]);
+
+            // Estimate Cadence
+            if (cleanRows.length >= 2) {
+                const d1 = new Date(timestamps[0]).getTime();
+                const d2 = new Date(timestamps[Math.min(5, timestamps.length - 1)]).getTime();
+                if (!isNaN(d1) && !isNaN(d2) && d2 > d1) {
+                    const avgSec = Math.round((d2 - d1) / (Math.min(5, timestamps.length - 1) * 1000));
+                    document.getElementById("preview-meta-cadence").textContent = `Estimated Cadence: ~${avgSec}s`;
+                }
+            }
+
+            // Check ground truth flag
+            groundTruthIndex = -1;
+            const flagCol = Object.keys(cleanRows[0]).find(h => ["is_after_change", "anomaly", "label"].includes(h.toLowerCase()));
+            if (flagCol) {
+                groundTruthIndex = cleanRows.findIndex(r => Number(r[flagCol]) === 1);
+            }
+
+            document.getElementById("chart-heading").textContent = `${selectedMetric.replace(/_/g, " ").toUpperCase()} Over Time`;
+            document.getElementById("chart-subheading").textContent = `${cleanRows.length.toLocaleString()} observations loaded from ${name || currentDatasetName}`;
+            statusBadge.className = "badge badge-live";
+            statusBadge.textContent = "Analysis Active";
+
+            adaptThresholdToMetric(cleanRows.map(r => cleanNumber(r[selectedMetric])));
             renderParamControls();
             runDetectionAndUpdate();
         }
 
         // -------------------------------------------------------------
-        // UI Controls & Param Rendering
+        // Parameter Adaptation & UI Controls
         // -------------------------------------------------------------
+        function adaptThresholdToMetric(values) {
+            const s = std(values);
+            const m = mean(values);
+
+            if (m < 5.0 && s < 2.0) {
+                algoConfigs.sliding_window.threshold = Math.max(0.01, Number((s * 1.5).toFixed(3)));
+            } else {
+                algoConfigs.sliding_window.threshold = Math.max(5.0, Number((s * 1.5).toFixed(1)));
+            }
+        }
+
         function renderParamControls() {
             paramControls.innerHTML = "";
             const cfg = algoConfigs[activeAlgorithm];
+            const values = filteredDataset.map(r => cleanNumber(r[selectedMetric]));
+            const s = std(values);
+            const isSmallScale = mean(values) < 5.0 && s < 2.0;
 
             if (activeAlgorithm === "sliding_window") {
+                const minTh = isSmallScale ? 0.01 : 5.0;
+                const maxTh = isSmallScale ? Number((s * 5.0).toFixed(2)) || 2.0 : Number((s * 5.0).toFixed(0)) || 250;
+                const stepTh = isSmallScale ? 0.01 : 5.0;
+
                 paramControls.innerHTML = `
                     <div class="form-group">
                         <label>Window Size <span class="label-val" id="val-ws">${cfg.window_size}</span></label>
-                        <input type="range" id="param-ws" min="4" max="30" value="${cfg.window_size}">
+                        <input type="range" id="param-ws" min="4" max="40" value="${cfg.window_size}">
                     </div>
                     <div class="form-group">
-                        <label>Difference Threshold (ms) <span class="label-val" id="val-th">${cfg.threshold}</span></label>
-                        <input type="range" id="param-th" min="10" max="200" step="5" value="${cfg.threshold}">
+                        <label>Difference Threshold <span class="label-val" id="val-th">${cfg.threshold}</span></label>
+                        <input type="range" id="param-th" min="${minTh}" max="${maxTh}" step="${stepTh}" value="${cfg.threshold}">
                     </div>
                 `;
                 document.getElementById("param-ws").addEventListener("input", e => {
@@ -1222,21 +2130,30 @@
                 paramControls.innerHTML = `
                     <div class="form-group">
                         <label>Baseline Window <span class="label-val" id="val-bw">${cfg.baseline_window}</span></label>
-                        <input type="range" id="param-bw" min="5" max="30" value="${cfg.baseline_window}">
+                        <input type="range" id="param-bw" min="5" max="50" value="${cfg.baseline_window}">
                     </div>
                     <div class="form-group">
-                        <label>Threshold <span class="label-val" id="val-cth">${cfg.threshold}</span></label>
+                        <label>Drift Slack (k) <span class="label-val" id="val-dr">${cfg.drift}</span></label>
+                        <input type="range" id="param-dr" min="0.1" max="2.0" step="0.1" value="${cfg.drift}">
+                    </div>
+                    <div class="form-group">
+                        <label>Threshold (Cumulative Z) <span class="label-val" id="val-cth">${cfg.threshold}</span></label>
                         <input type="range" id="param-cth" min="2" max="25" step="0.5" value="${cfg.threshold}">
                     </div>
                     ${isRobust ? `
                     <div class="form-group">
-                        <label>Clip Z-Score (Winsorize) <span class="label-val" id="val-cz">${cfg.clip_z}</span></label>
+                        <label>Clip Outlier Z (Winsorize) <span class="label-val" id="val-cz">${cfg.clip_z}</span></label>
                         <input type="range" id="param-cz" min="2" max="8" step="0.5" value="${cfg.clip_z}">
                     </div>` : ''}
                 `;
                 document.getElementById("param-bw").addEventListener("input", e => {
                     cfg.baseline_window = Number(e.target.value);
                     document.getElementById("val-bw").textContent = cfg.baseline_window;
+                    runDetectionAndUpdate();
+                });
+                document.getElementById("param-dr").addEventListener("input", e => {
+                    cfg.drift = Number(e.target.value);
+                    document.getElementById("val-dr").textContent = cfg.drift;
                     runDetectionAndUpdate();
                 });
                 document.getElementById("param-cth").addEventListener("input", e => {
@@ -1281,6 +2198,12 @@
                     document.getElementById("val-ew-cz").textContent = cfg.clip_z;
                     runDetectionAndUpdate();
                 });
+            } else if (activeAlgorithm === "compare_all") {
+                paramControls.innerHTML = `
+                    <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5; padding: 4px 0;">
+                        Evaluating all 4 detection engines concurrently. Tuning individual sliders is available in their dedicated tabs.
+                    </div>
+                `;
             }
         }
 
@@ -1288,30 +2211,133 @@
         // Detection Execution & Rendering
         // -------------------------------------------------------------
         function runDetectionAndUpdate() {
-            if (!dataset.length || !selectedMetric) return;
+            if (!filteredDataset.length || !selectedMetric) return;
 
-            const values = dataset.map(r => Number(r[selectedMetric]));
+            const values = filteredDataset.map(r => cleanNumber(r[selectedMetric]));
             const cfg = algoConfigs[activeAlgorithm];
 
             if (activeAlgorithm === "sliding_window") {
                 detectedEvents = runSlidingWindow(values, cfg);
-            } else if (activeAlgorithm === "cusum") {
+                comparisonPanel.classList.remove("visible");
+            } else if (activeAlgorithm === "cusum" || activeAlgorithm === "robust_cusum") {
                 detectedEvents = runCusum(values, cfg);
-            } else if (activeAlgorithm === "robust_cusum") {
-                detectedEvents = runCusum(values, cfg);
+                comparisonPanel.classList.remove("visible");
             } else if (activeAlgorithm === "ewma") {
                 detectedEvents = runEWMA(values, cfg);
+                comparisonPanel.classList.remove("visible");
+            } else if (activeAlgorithm === "compare_all") {
+                allDetectorResults = runCompareAll(values);
+                renderComparisonMatrix(allDetectorResults);
+                comparisonPanel.classList.add("visible");
+                // Default to EWMA results for the chart display in compare mode
+                detectedEvents = allDetectorResults.ewma.events;
             }
 
+            activeEventIndex = 0;
+            renderEventChips();
             updateChart(values);
             updateImpactCard(values);
         }
 
+        function renderEventChips() {
+            eventsChipsContainer.innerHTML = "";
+            if (!detectedEvents.length) {
+                eventsChipsContainer.innerHTML = `<span style="font-size: 11px; color: var(--text-subtle);">Zero structural shifts detected</span>`;
+                return;
+            }
+
+            detectedEvents.forEach((ev, idx) => {
+                const chip = document.createElement("button");
+                const isUp = ev.direction === "up";
+                chip.className = `event-chip ${isUp ? 'chip-up' : 'chip-down'} ${idx === activeEventIndex ? 'active' : ''}`;
+                chip.innerHTML = `${isUp ? '▲' : '▼'} Shift #${ev.index} <span style="opacity:0.7">(${timestamps[ev.index] ? timestamps[ev.index].slice(11, 19) : ''})</span>`;
+                chip.addEventListener("click", () => {
+                    activeEventIndex = idx;
+                    renderEventChips();
+                    const values = filteredDataset.map(r => cleanNumber(r[selectedMetric]));
+                    updateChart(values);
+                    updateImpactCard(values);
+                    zoomToEvent(ev.index);
+                });
+                eventsChipsContainer.appendChild(chip);
+            });
+        }
+
+        function zoomToEvent(idx) {
+            const total = timestamps.length;
+            if (total <= 0) return;
+            const pad = Math.max(30, Math.floor(total * 0.08));
+            const startIdx = Math.max(0, idx - pad);
+            const endIdx = Math.min(total - 1, idx + pad);
+            const startPct = (startIdx / total) * 100;
+            const endPct = (endIdx / total) * 100;
+            chart.dispatchAction({
+                type: 'dataZoom',
+                start: startPct,
+                end: endPct
+            });
+        }
+
+        function renderComparisonMatrix(res) {
+            const tbody = document.getElementById("comparison-table-body");
+            const consensusBadge = document.getElementById("consensus-badge");
+            tbody.innerHTML = "";
+
+            const detectors = ["sliding_window", "cusum", "robust_cusum", "ewma"];
+            const firstDetections = detectors.map(k => res[k].events[0]?.index).filter(v => v !== undefined);
+            
+            // Check consensus
+            if (firstDetections.length >= 2) {
+                const medianIdx = median(firstDetections);
+                consensusBadge.className = "badge badge-live";
+                consensusBadge.textContent = `Consensus Shift near #${medianIdx}`;
+            } else {
+                consensusBadge.className = "badge badge-loading";
+                consensusBadge.textContent = "Mixed Signals";
+            }
+
+            detectors.forEach(key => {
+                const det = res[key];
+                const evCount = det.events.length;
+                const firstEv = det.events[0];
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td style="font-weight:700; color:var(--text-main);">${det.name}</td>
+                    <td>${det.type}</td>
+                    <td><span style="color:${evCount > 0 ? 'var(--rose)' : 'var(--emerald)'};font-weight:700;">${evCount}</span></td>
+                    <td>${firstEv ? `#${firstEv.index} (${firstEv.direction === 'up' ? '▲ Up' : '▼ Down'})` : 'None'}</td>
+                    <td>${firstEv && timestamps[firstEv.index] ? timestamps[firstEv.index] : 'N/A'}</td>
+                    <td style="font-size:12px;color:var(--text-muted);">${det.resilience}</td>
+                    <td>
+                        <button class="btn btn-subtle" style="padding:2px 8px;font-size:10px;" onclick="switchToDetector('${key}')">
+                            Select
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.switchToDetector = function(algoKey) {
+            document.querySelectorAll(".algo-tab").forEach(t => {
+                t.classList.toggle("active", t.dataset.algo === algoKey);
+            });
+            activeAlgorithm = algoKey;
+            renderParamControls();
+            runDetectionAndUpdate();
+        };
+
+        // -------------------------------------------------------------
+        // Chart Update & Visuals
+        // -------------------------------------------------------------
         function updateChart(values) {
             const showTruth = toggleTruth.checked && groundTruthIndex >= 0;
             const showMeans = toggleMeans.checked && detectedEvents.length > 0;
+            const showOutliers = toggleOutliers.checked;
+            const smoothing = smoothingSelect.value;
 
             const markLines = [];
+            const markAreas = [];
 
             // Add Ground Truth reference line
             if (showTruth) {
@@ -1329,42 +2355,120 @@
 
             // Add Detected Change Point markers
             detectedEvents.forEach((ev, idx) => {
+                const isSelected = idx === activeEventIndex;
                 const isUp = ev.direction === "up";
                 markLines.push({
                     xAxis: timestamps[ev.index],
                     lineStyle: {
                         color: isUp ? "#f43f5e" : "#10b981",
-                        width: 2.5,
-                        type: "solid"
+                        width: isSelected ? 3 : 1.8,
+                        type: isSelected ? "solid" : "dashed"
                     },
                     label: {
-                        formatter: `▲ Detected #${ev.index} (${activeAlgorithm.toUpperCase()})`,
+                        formatter: `${isUp ? '▲' : '▼'} Shift #${ev.index}${isSelected ? ' (Selected)' : ''}`,
                         color: isUp ? "#f43f5e" : "#10b981",
-                        fontWeight: "bold",
+                        fontWeight: isSelected ? "bold" : "normal",
                         fontSize: 11,
-                        position: "middle"
+                        position: isSelected ? "insideEndTop" : "middle"
                     }
                 });
             });
 
-            // Pre/Post Mean Lines if change detected
-            let markAreas = [];
+            // Pre/Post Mean Levels
             if (showMeans && detectedEvents.length > 0) {
-                const firstIdx = detectedEvents[0].index;
-                const beforeVals = values.slice(0, firstIdx);
-                const afterVals = values.slice(firstIdx);
+                const targetIdx = detectedEvents[activeEventIndex]?.index || detectedEvents[0].index;
+                const beforeVals = values.slice(0, targetIdx);
+                const afterVals = values.slice(targetIdx);
                 const bMean = mean(beforeVals);
                 const aMean = mean(afterVals);
 
                 markLines.push({
                     yAxis: bMean,
                     lineStyle: { color: "rgba(148, 163, 184, 0.5)", type: "dotted", width: 1.5 },
-                    label: { formatter: `Pre μ: ${bMean.toFixed(1)}`, position: "start", fontSize: 10, color: "#94a3b8" }
+                    label: { formatter: `Pre μ: ${bMean.toFixed(2)}`, position: "start", fontSize: 10, color: "#94a3b8" }
                 });
                 markLines.push({
                     yAxis: aMean,
                     lineStyle: { color: "rgba(244, 63, 94, 0.6)", type: "dotted", width: 1.5 },
-                    label: { formatter: `Post μ: ${aMean.toFixed(1)}`, position: "end", fontSize: 10, color: "#f43f5e" }
+                    label: { formatter: `Post μ: ${aMean.toFixed(2)}`, position: "end", fontSize: 10, color: "#f43f5e" }
+                });
+
+                // Regime background area
+                markAreas.push([
+                    { xAxis: timestamps[targetIdx], itemStyle: { color: 'rgba(244, 63, 94, 0.04)' } },
+                    { xAxis: timestamps[timestamps.length - 1] }
+                ]);
+            }
+
+            // Optional Moving Average Series
+            const seriesList = [];
+            let trendData = [];
+            const trendLegend = document.getElementById("legend-trend");
+
+            if (smoothing === "ma5" || smoothing === "ma15") {
+                const win = smoothing === "ma5" ? 5 : 15;
+                trendData = computeMovingAverage(values, win);
+                trendLegend.style.display = "flex";
+                seriesList.push({
+                    name: `Moving Average (${win})`,
+                    type: "line",
+                    data: trendData,
+                    smooth: true,
+                    showSymbol: false,
+                    lineStyle: { width: 2, color: "#f59e0b", type: "dotted" },
+                    z: 3
+                });
+            } else {
+                trendLegend.style.display = "none";
+            }
+
+            // Outlier scatter highlighting (if enabled)
+            const outlierPoints = [];
+            if (showOutliers && values.length >= 20) {
+                const m = mean(values.slice(0, 50));
+                const s = std(values.slice(0, 50));
+                if (s > 0) {
+                    values.forEach((v, idx) => {
+                        if (Math.abs(v - m) / s >= 4.0) {
+                            outlierPoints.push([timestamps[idx], v]);
+                        }
+                    });
+                }
+            }
+
+            // Primary Series
+            seriesList.unshift({
+                name: selectedMetric,
+                type: "line",
+                data: values,
+                sampling: "lttb", // High-performance downsampling for large datasets
+                showSymbol: values.length < 150,
+                symbolSize: 4,
+                lineStyle: { width: 2.2, color: "#6366f1" },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: "rgba(99, 102, 241, 0.35)" },
+                        { offset: 1, color: "rgba(99, 102, 241, 0.0)" }
+                    ])
+                },
+                markLine: {
+                    symbol: ["none", "none"],
+                    data: markLines
+                },
+                markArea: {
+                    data: markAreas
+                },
+                z: 2
+            });
+
+            if (outlierPoints.length > 0) {
+                seriesList.push({
+                    name: "Outlier Spikes",
+                    type: "scatter",
+                    data: outlierPoints,
+                    itemStyle: { color: "#f59e0b" },
+                    symbolSize: 8,
+                    z: 4
                 });
             }
 
@@ -1378,12 +2482,18 @@
                     formatter: items => {
                         const it = items[0];
                         const idx = it.dataIndex;
+                        const val = it.value !== undefined ? it.value : 'N/A';
+                        const isChange = detectedEvents.some(e => e.index === idx);
+                        const isTruth = groundTruthIndex === idx;
+
                         return `
-                            <div style="font-weight:700;margin-bottom:4px;">${timestamps[idx]} (Obs #${idx})</div>
+                            <div style="font-weight:700;margin-bottom:4px;">${timestamps[idx] || ''} (Obs #${idx})</div>
                             <div style="display:flex;align-items:center;gap:6px;">
                                 <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#6366f1;"></span>
-                                <span>${selectedMetric}: <strong>${it.value.toFixed(2)}</strong></span>
+                                <span>${selectedMetric}: <strong>${typeof val === 'number' ? val.toFixed(3) : val}</strong></span>
                             </div>
+                            ${isChange ? `<div style="color:#f43f5e;font-weight:700;margin-top:4px;">▲ Detected Change Point</div>` : ''}
+                            ${isTruth ? `<div style="color:#06b6d4;font-weight:700;margin-top:4px;">● Known Ground Truth</div>` : ''}
                         `;
                     }
                 },
@@ -1395,7 +2505,7 @@
                     axisLine: { lineStyle: { color: "#334155" } },
                     axisLabel: {
                         color: "#94a3b8",
-                        formatter: val => val.length > 10 ? val.slice(11, 16) : val
+                        formatter: val => val && val.length > 10 ? val.slice(11, 19) : val
                     }
                 },
                 yAxis: {
@@ -1418,29 +2528,12 @@
                         textStyle: { color: "#94a3b8" }
                     }
                 ],
-                series: [{
-                    name: selectedMetric,
-                    type: "line",
-                    data: values,
-                    smooth: true,
-                    showSymbol: false,
-                    lineStyle: { width: 2.5, color: "#6366f1" },
-                    areaStyle: {
-                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                            { offset: 0, color: "rgba(99, 102, 241, 0.35)" },
-                            { offset: 1, color: "rgba(99, 102, 241, 0.0)" }
-                        ])
-                    },
-                    markLine: {
-                        symbol: ["none", "none"],
-                        data: markLines
-                    }
-                }]
+                series: seriesList
             }, true);
         }
 
         // -------------------------------------------------------------
-        // Statistical Impact Card Rendering
+        // Statistical Impact Analysis Card Rendering
         // -------------------------------------------------------------
         function updateImpactCard(values) {
             const impactCard = document.getElementById("impact-section");
@@ -1462,8 +2555,8 @@
                 impactCard.className = "impact-card severity-low";
                 badge.className = "severity-pill pill-low";
                 badge.textContent = "Stable Series";
-                subtitle.textContent = "No significant change points detected";
-                sigTag.textContent = "Metrics remain within normal variation";
+                subtitle.textContent = "No significant structural change points detected";
+                sigTag.textContent = "Metrics remain within normal baseline variation";
 
                 const fullStats = computeStats(values);
                 kpiBefore.textContent = fullStats.mean.toFixed(2);
@@ -1491,12 +2584,13 @@
                 `;
 
                 narrative.innerHTML = `<strong>Status:</strong> The metric <code>${selectedMetric}</code> exhibits stable baseline behavior with zero sustained anomalies.`;
+                lastReportData = { status: "stable", metric: selectedMetric, stats: fullStats };
                 return;
             }
 
-            // A change was detected
-            const firstChange = detectedEvents[0];
-            const changeIdx = firstChange.index;
+            // A change was detected; inspect active event
+            const targetEvent = detectedEvents[activeEventIndex] || detectedEvents[0];
+            const changeIdx = targetEvent.index;
             const beforeVals = values.slice(0, changeIdx);
             const afterVals = values.slice(changeIdx);
 
@@ -1544,9 +2638,8 @@
 
             if (groundTruthIndex >= 0) {
                 const diffIdx = changeIdx - groundTruthIndex;
-                const diffMin = diffIdx * 5; // 5 min cadence
-                kpiLatency.textContent = `${diffMin >= 0 ? "+" : ""}${diffMin} min`;
-                kpiLatencySub.textContent = `${diffIdx >= 0 ? "+" : ""}${diffIdx} steps from truth (#${groundTruthIndex})`;
+                kpiLatency.textContent = `${diffIdx >= 0 ? "+" : ""}${diffIdx} steps`;
+                kpiLatencySub.textContent = `vs Ground Truth (#${groundTruthIndex})`;
             } else {
                 kpiLatency.textContent = `#${changeIdx}`;
                 kpiLatencySub.textContent = "First detection step";
@@ -1554,7 +2647,7 @@
 
             tbody.innerHTML = `
                 <tr>
-                    <td style="color:#94a3b8;font-weight:600;">Pre-Change</td>
+                    <td style="color:#94a3b8;font-weight:600;">Pre-Change (Baseline)</td>
                     <td>${sBefore.count}</td>
                     <td>${sBefore.mean.toFixed(2)}</td>
                     <td>${sBefore.std.toFixed(2)}</td>
@@ -1564,7 +2657,7 @@
                     <td>${sBefore.iqr.toFixed(2)}</td>
                 </tr>
                 <tr>
-                    <td style="color:#f43f5e;font-weight:600;">Post-Change</td>
+                    <td style="color:#f43f5e;font-weight:600;">Post-Change (Regime)</td>
                     <td>${sAfter.count}</td>
                     <td>${sAfter.mean.toFixed(2)}</td>
                     <td>${sAfter.std.toFixed(2)}</td>
@@ -1579,23 +2672,77 @@
             narrative.innerHTML = `
                 <strong>Analysis Narrative:</strong> <code>${selectedMetric}</code> ${directionWord} by 
                 <strong>${Math.abs(absChange).toFixed(2)}</strong> (<strong>${pctChange.toFixed(1)}%</strong>) 
-                at observation #${changeIdx}. The standardized effect size is <strong>${category.toUpperCase()}</strong> (Cohen's d = ${d.toFixed(2)}), 
+                at observation #${changeIdx} (${timestamps[changeIdx] || ''}). The standardized effect size is <strong>${category.toUpperCase()}</strong> (Cohen's d = ${d.toFixed(2)}), 
                 indicating a <strong>${severity.toUpperCase()}</strong> regime shift.
             `;
+
+            lastReportData = {
+                status: "shift_detected",
+                severity,
+                metric: selectedMetric,
+                change_index: changeIdx,
+                timestamp: timestamps[changeIdx],
+                absolute_change: absChange,
+                percent_change: pctChange,
+                cohen_d: d,
+                effect_size_category: category,
+                pre_stats: sBefore,
+                post_stats: sAfter,
+                algorithm: activeAlgorithm
+            };
         }
 
         // -------------------------------------------------------------
-        // Event Listeners
+        // Event Listeners & Interactive Handlers
         // -------------------------------------------------------------
         datasetSelect.addEventListener("change", e => {
             currentDatasetName = e.target.value;
             loadDataset(currentDatasetName);
         });
 
+        timestampSelect.addEventListener("change", e => {
+            selectedTimestamp = e.target.value;
+            applyFilterAndRender(currentDatasetName);
+        });
+
         metricSelect.addEventListener("change", e => {
             selectedMetric = e.target.value;
-            document.getElementById("chart-heading").textContent = `${selectedMetric.replace(/_/g, " ").toUpperCase()} Over Time`;
-            runDetectionAndUpdate();
+            applyFilterAndRender(currentDatasetName);
+        });
+
+        dimensionSelect.addEventListener("change", e => {
+            selectedDimension = e.target.value;
+            applyFilterAndRender(currentDatasetName);
+        });
+
+        smoothingSelect.addEventListener("change", () => {
+            if (filteredDataset.length) updateChart(filteredDataset.map(r => cleanNumber(r[selectedMetric])));
+        });
+
+        toggleSort.addEventListener("change", () => {
+            if (rawDataset.length) applyFilterAndRender(currentDatasetName);
+        });
+
+        toggleTruth.addEventListener("change", () => {
+            if (filteredDataset.length) updateChart(filteredDataset.map(r => cleanNumber(r[selectedMetric])));
+        });
+
+        toggleMeans.addEventListener("change", () => {
+            if (filteredDataset.length) updateChart(filteredDataset.map(r => cleanNumber(r[selectedMetric])));
+        });
+
+        toggleOutliers.addEventListener("change", () => {
+            if (filteredDataset.length) updateChart(filteredDataset.map(r => cleanNumber(r[selectedMetric])));
+        });
+
+        zoomAllBtn.addEventListener("click", () => {
+            chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
+        });
+
+        zoomChangeBtn.addEventListener("click", () => {
+            if (detectedEvents.length > 0) {
+                zoomToEvent(detectedEvents[activeEventIndex]?.index || detectedEvents[0].index);
+            }
         });
 
         document.querySelectorAll(".algo-tab").forEach(tab => {
@@ -1608,26 +2755,18 @@
             });
         });
 
-        toggleTruth.addEventListener("change", () => {
-            if (dataset.length) updateChart(dataset.map(r => Number(r[selectedMetric])));
-        });
-
-        toggleMeans.addEventListener("change", () => {
-            if (dataset.length) updateChart(dataset.map(r => Number(r[selectedMetric])));
-        });
-
         // Drag & Drop CSV upload
         dropzone.addEventListener("click", () => fileInput.click());
         dropzone.addEventListener("dragover", e => {
             e.preventDefault();
-            dropzone.style.borderColor = "var(--primary)";
+            dropzone.classList.add("drag-active");
         });
         dropzone.addEventListener("dragleave", () => {
-            dropzone.style.borderColor = "var(--border-highlight)";
+            dropzone.classList.remove("drag-active");
         });
         dropzone.addEventListener("drop", e => {
             e.preventDefault();
-            dropzone.style.borderColor = "var(--border-highlight)";
+            dropzone.classList.remove("drag-active");
             if (e.dataTransfer.files.length) {
                 handleUploadedFile(e.dataTransfer.files[0]);
             }
@@ -1640,21 +2779,532 @@
         });
 
         function handleUploadedFile(file) {
+            dismissError();
+            statusBadge.className = "badge badge-loading";
+            statusBadge.textContent = "Uploading...";
+
             const reader = new FileReader();
+            reader.onerror = () => {
+                showError(`Failed to read file ${file.name}.`);
+            };
             reader.onload = ev => {
-                const text = ev.target.result;
-                processCSVData(text, file.name);
-                // Add temporary option to dataset select
-                const opt = document.createElement("option");
-                opt.value = file.name;
-                opt.textContent = `Custom: ${file.name}`;
-                opt.selected = true;
-                datasetSelect.appendChild(opt);
+                try {
+                    const text = ev.target.result;
+                    uploadedFilesMap[file.name] = text;
+                    currentDatasetName = file.name;
+
+                    processCSVData(text, file.name);
+
+                    // Add to Custom Uploads group
+                    const customGroup = document.getElementById("custom-uploads-group");
+                    let opt = Array.from(datasetSelect.options).find(o => o.value === file.name);
+                    if (!opt) {
+                        opt = document.createElement("option");
+                        opt.value = file.name;
+                        opt.textContent = `Custom: ${file.name}`;
+                        customGroup.appendChild(opt);
+                    }
+                    datasetSelect.value = file.name;
+                    showToast(`Uploaded ${file.name} successfully!`, "success");
+                } catch (err) {
+                    showError(`CSV Processing Error: ${err.message}`);
+                }
             };
             reader.readAsText(file);
         }
 
+        // Export JSON Report
+        exportJsonBtn.addEventListener("click", () => {
+            if (!lastReportData) {
+                showToast("No report data available yet.", "info");
+                return;
+            }
+            const blob = new Blob([JSON.stringify(lastReportData, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `patterntime_report_${currentDatasetName.replace(/\.csv$/, '')}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("Exported JSON report", "success");
+        });
+
+        // Export PNG Chart Image
+        exportPngBtn.addEventListener("click", () => {
+            const dataUrl = chart.getDataURL({
+                type: 'png',
+                pixelRatio: 2,
+                backgroundColor: '#090d16'
+            });
+            const a = document.createElement("a");
+            a.href = dataUrl;
+            a.download = `patterntime_chart_${currentDatasetName.replace(/\.csv$/, '')}.png`;
+            a.click();
+            showToast("Chart saved as high-res PNG", "success");
+        });
+
+        // Export Annotated CSV
+        exportCsvBtn.addEventListener("click", () => {
+            if (!filteredDataset.length) {
+                showToast("No data to export.", "info");
+                return;
+            }
+            const changeIndices = new Set(detectedEvents.map(e => e.index));
+            const firstChange = detectedEvents[0]?.index || Infinity;
+
+            const annotatedRows = filteredDataset.map((row, idx) => ({
+                ...row,
+                patterntime_is_change_point: changeIndices.has(idx) ? 1 : 0,
+                patterntime_regime: idx < firstChange ? "pre_change" : "post_change"
+            }));
+
+            let csvContent = "";
+            if (typeof Papa !== "undefined") {
+                csvContent = Papa.unparse(annotatedRows);
+            } else {
+                const keys = Object.keys(annotatedRows[0]);
+                csvContent = keys.join(",") + "\n" + annotatedRows.map(r => keys.map(k => r[k]).join(",")).join("\n");
+            }
+
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `annotated_${currentDatasetName.replace(/\.csv$/, '')}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("Exported annotated CSV", "success");
+        });
+
+        // Save Run to MySQL Database Persistence
+        const saveDbBtn = document.getElementById("save-db-btn");
+        const dbBadge = document.getElementById("db-badge");
+
+        async function checkDbStatus() {
+            try {
+                let resp = null;
+                try {
+                    resp = await fetch("/api/db/status");
+                } catch(e) {
+                    resp = await fetch("http://localhost:8089/api/db/status");
+                }
+                if (resp && resp.ok) {
+                    const data = await resp.json();
+                    if (data.connected && dbBadge) {
+                        dbBadge.textContent = "MySQL: patterntime";
+                        dbBadge.className = "badge badge-live";
+                        dbBadge.title = `Connected to MySQL: ${data.tables.length} tables found`;
+                        return true;
+                    }
+                }
+            } catch (err) {
+                // Background fallback
+            }
+            if (dbBadge) {
+                dbBadge.textContent = "MySQL: Configured";
+                dbBadge.title = "Credentials maintained in .env";
+            }
+            return false;
+        }
+        checkDbStatus();
+
+        if (saveDbBtn) {
+            saveDbBtn.addEventListener("click", async () => {
+                if (!filteredDataset.length || !detectedEvents.length) {
+                    showToast("No detection run to persist yet. Run detection first.", "info");
+                    return;
+                }
+                const originalHtml = saveDbBtn.innerHTML;
+                saveDbBtn.disabled = true;
+                saveDbBtn.textContent = "Saving to MySQL...";
+
+                const payload = {
+                    dataset_name: currentDatasetName,
+                    metric_name: selectedMetric,
+                    algorithm_name: activeAlgorithm,
+                    params: {},
+                    execution_time_ms: 1.5,
+                    row_count: filteredDataset.length,
+                    timestamp_col: timestampColumn,
+                    metric_cols: numericColumns,
+                    events: detectedEvents.map(e => ({
+                        index: e.index,
+                        timestamp: e.timestamp,
+                        direction: e.direction || "unknown",
+                        score: e.score || 0.0,
+                        metadata: e.metadata || {}
+                    })),
+                    impact_report: lastReportData ? {
+                        change_index: lastReportData.change_index || detectedEvents[0]?.index || 0,
+                        severity: lastReportData.severity || "low",
+                        cohen_d: lastReportData.cohen_d || 0.0,
+                        effect_size_category: lastReportData.effect_size_category || "negligible",
+                        pre_mean: lastReportData.pre_stats?.mean || 0.0,
+                        post_mean: lastReportData.post_stats?.mean || 0.0,
+                        absolute_change: lastReportData.absolute_change || 0.0,
+                        percent_change: lastReportData.percent_change,
+                        summary_sentence: `${selectedMetric} shift detected at index #${lastReportData.change_index}`
+                    } : null
+                };
+
+                try {
+                    let resp = null;
+                    try {
+                        resp = await fetch("/api/runs", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payload)
+                        });
+                    } catch (e) {
+                        resp = await fetch("http://localhost:8089/api/runs", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payload)
+                        });
+                    }
+
+                    if (resp && (resp.status === 200 || resp.status === 201)) {
+                        const res = await resp.json();
+                        showToast(`✓ Run #${res.run_id} saved to MySQL database 'patterntime'`, "success");
+                    } else {
+                        showToast("Failed to save run via API.", "error");
+                    }
+                } catch (err) {
+                    showToast("API server not active on port 8089. Run '.venv/bin/patterntime serve' or use CLI.", "info");
+                } finally {
+                    saveDbBtn.disabled = false;
+                    saveDbBtn.innerHTML = originalHtml;
+                }
+            });
+        }
+
+        // Copy Markdown Summary
+        copySummaryBtn.addEventListener("click", () => {
+            if (!lastReportData) return;
+            const md = `### 📊 PatternTime Investigation Report
+- **Dataset:** \`${currentDatasetName}\`
+- **Metric:** \`${selectedMetric}\`
+- **Status:** ${lastReportData.status === 'shift_detected' ? `🚨 **${lastReportData.severity.toUpperCase()} REGIME SHIFT**` : '✅ Stable'}
+- **Detected Shift Index:** #${lastReportData.change_index || 'N/A'} (${lastReportData.timestamp || 'N/A'})
+- **Pre-Change Mean (μ):** ${lastReportData.pre_stats ? lastReportData.pre_stats.mean.toFixed(2) : 'N/A'}
+- **Post-Change Mean (μ):** ${lastReportData.post_stats ? lastReportData.post_stats.mean.toFixed(2) : 'N/A'}
+- **Absolute Delta:** ${lastReportData.absolute_change !== undefined ? (lastReportData.absolute_change > 0 ? '+' : '') + lastReportData.absolute_change.toFixed(2) : 'N/A'} (${lastReportData.percent_change !== undefined ? (lastReportData.percent_change > 0 ? '+' : '') + lastReportData.percent_change.toFixed(1) + '%' : 'N/A'})
+- **Cohen's d Effect Size:** ${lastReportData.cohen_d !== undefined ? lastReportData.cohen_d.toFixed(2) : '0.00'} (${lastReportData.effect_size_category || 'N/A'})
+- **Algorithm Used:** \`${lastReportData.algorithm || activeAlgorithm}\`
+`;
+            navigator.clipboard.writeText(md).then(() => {
+                showToast("Markdown summary copied to clipboard!", "success");
+            }).catch(() => {
+                showToast("Failed to copy to clipboard", "info");
+            });
+        });
+
+        // -------------------------------------------------------------
+        // MySQL Historical Runs Manager
+        // -------------------------------------------------------------
+        let cachedHistoryRuns = [];
+        let activeDetailedRun = null;
+
+        async function fetchFromApi(endpoint, options = {}) {
+            let resp = null;
+            try {
+                resp = await fetch(endpoint, options);
+            } catch (err) {
+                // Fallback to explicit port 8089 if running separate static server
+                const altUrl = "http://localhost:8089" + endpoint;
+                resp = await fetch(altUrl, options);
+            }
+            return resp;
+        }
+
+        window.loadHistoryRuns = async function() {
+            const statusIndicator = document.getElementById("history-status-indicator");
+            const tbody = document.getElementById("history-table-body");
+            const emptyState = document.getElementById("history-empty-state");
+            const dsFilter = document.getElementById("history-dataset-filter");
+
+            if (statusIndicator) statusIndicator.textContent = "Connecting to MySQL database...";
+            
+            try {
+                // Fetch datasets for filter dropdown
+                const dsResp = await fetchFromApi("/api/datasets");
+                if (dsResp && dsResp.ok) {
+                    const dsData = await dsResp.json();
+                    if (dsFilter && dsData.datasets) {
+                        const curVal = dsFilter.value;
+                        dsFilter.innerHTML = '<option value="">All Datasets</option>';
+                        dsData.datasets.forEach(d => {
+                            const opt = document.createElement("option");
+                            opt.value = d.name;
+                            opt.textContent = `${d.name} (${d.row_count} rows)`;
+                            dsFilter.appendChild(opt);
+                        });
+                        dsFilter.value = curVal;
+                    }
+                }
+
+                // Fetch runs list
+                const runsResp = await fetchFromApi("/api/runs?limit=100");
+                if (!runsResp || !runsResp.ok) {
+                    throw new Error(`Failed to fetch runs (HTTP ${runsResp ? runsResp.status : "offline"})`);
+                }
+
+                const data = await runsResp.json();
+                cachedHistoryRuns = data.runs || [];
+
+                if (statusIndicator) {
+                    statusIndicator.textContent = `MySQL: patterntime (${cachedHistoryRuns.length} runs saved)`;
+                }
+
+                renderHistoryTable();
+            } catch (err) {
+                if (statusIndicator) {
+                    statusIndicator.textContent = "MySQL API offline. Launch '.venv/bin/patterntime serve' or use CLI.";
+                }
+                if (tbody) tbody.innerHTML = "";
+                if (emptyState) {
+                    emptyState.style.display = "block";
+                    emptyState.innerHTML = `
+                        <p style="color: var(--rose); font-weight: 600;">Could not connect to PatternTime API</p>
+                        <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Make sure the API server is running with <code>.venv/bin/patterntime serve</code></p>
+                    `;
+                }
+            }
+        };
+
+        function renderHistoryTable() {
+            const tbody = document.getElementById("history-table-body");
+            const emptyState = document.getElementById("history-empty-state");
+            const searchVal = (document.getElementById("history-search")?.value || "").toLowerCase().trim();
+            const filterDs = document.getElementById("history-dataset-filter")?.value || "";
+
+            if (!tbody) return;
+            tbody.innerHTML = "";
+
+            const filtered = cachedHistoryRuns.filter(r => {
+                const matchDs = !filterDs || r.dataset_name === filterDs;
+                const matchSearch = !searchVal || 
+                    (r.dataset_name && r.dataset_name.toLowerCase().includes(searchVal)) ||
+                    (r.metric_name && r.metric_name.toLowerCase().includes(searchVal)) ||
+                    (r.algorithm_name && r.algorithm_name.toLowerCase().includes(searchVal));
+                return matchDs && matchSearch;
+            });
+
+            if (!filtered.length) {
+                if (emptyState) emptyState.style.display = "block";
+                return;
+            }
+
+            if (emptyState) emptyState.style.display = "none";
+
+            filtered.forEach(run => {
+                const tr = document.createElement("tr");
+                tr.style.borderBottom = "1px solid var(--border-color)";
+                tr.style.transition = "background 0.15s ease";
+                tr.onmouseenter = () => tr.style.background = "rgba(255, 255, 255, 0.03)";
+                tr.onmouseleave = () => tr.style.background = "transparent";
+
+                const dateStr = run.created_at ? run.created_at.replace("T", " ").substring(0, 19) : "-";
+                const algoDisplay = (run.algorithm_name || "unknown").toUpperCase();
+
+                tr.innerHTML = `
+                    <td style="padding: 10px 14px; font-weight: 600; color: var(--primary-light);">#${run.id}</td>
+                    <td style="padding: 10px 14px; color: var(--text-main); font-weight: 500;">
+                        ${run.dataset_name}
+                    </td>
+                    <td style="padding: 10px 14px; color: var(--cyan); font-family: 'JetBrains Mono', monospace; font-size: 12px;">
+                        ${run.metric_name}
+                    </td>
+                    <td style="padding: 10px 14px;">
+                        <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: var(--primary-light); font-size: 11px;">
+                            ${algoDisplay}
+                        </span>
+                    </td>
+                    <td style="padding: 10px 14px; color: ${run.total_events > 0 ? 'var(--amber)' : 'var(--text-muted)'}; font-weight: 600;">
+                        ${run.total_events} ${run.total_events === 1 ? 'event' : 'events'}
+                    </td>
+                    <td style="padding: 10px 14px;">
+                        <span class="badge ${run.total_events > 0 ? 'badge-danger' : 'badge-live'}" style="font-size: 11px;">
+                            ${run.total_events > 0 ? 'Shift Detected' : 'Stable'}
+                        </span>
+                    </td>
+                    <td style="padding: 10px 14px; color: var(--text-muted); font-size: 12px;">${dateStr}</td>
+                    <td style="padding: 10px 14px; text-align: right;">
+                        <div style="display: inline-flex; gap: 6px;">
+                            <button class="btn btn-subtle" onclick="window.inspectHistoryRun(${run.id})" style="padding: 4px 8px; font-size: 12px;">Inspect</button>
+                            <button class="btn btn-subtle" onclick="window.deleteHistoryRun(${run.id})" style="padding: 4px 8px; font-size: 12px; color: var(--rose);" title="Delete run">🗑</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.inspectHistoryRun = async function(runId) {
+            const detailPanel = document.getElementById("history-detail-panel");
+            const runIdBadge = document.getElementById("detail-run-id");
+            const runTitle = document.getElementById("detail-run-title");
+            const contentArea = document.getElementById("detail-content-area");
+
+            if (!detailPanel || !contentArea) return;
+
+            detailPanel.style.display = "block";
+            contentArea.innerHTML = `<p style="color:var(--text-muted);">Loading full details for Run #${runId}...</p>`;
+
+            try {
+                const resp = await fetchFromApi(`/api/runs/${runId}`);
+                if (!resp || !resp.ok) {
+                    throw new Error("Could not load run details");
+                }
+                const data = await resp.json();
+                const run = data.run;
+                activeDetailedRun = run;
+
+                runIdBadge.textContent = `Run #${run.id}`;
+                runTitle.textContent = `${run.dataset_name} — ${run.metric_name} (${run.algorithm_name})`;
+
+                // Build detailed HTML
+                const events = run.events || [];
+                const impactReports = run.impact_reports || [];
+                const paramsStr = Object.entries(run.params || {}).map(([k, v]) => `<code>${k}=${v}</code>`).join(", ") || "Default";
+
+                let eventsHtml = "";
+                if (events.length > 0) {
+                    eventsHtml = `
+                        <div style="margin-top: 12px;">
+                            <h4 style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Detected Change Points (${events.length})</h4>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                ${events.map(ev => `
+                                    <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 12px;">
+                                        <span style="font-weight: 600; color: ${ev.direction === 'up' ? 'var(--rose)' : 'var(--cyan)'};">
+                                            ${ev.direction.toUpperCase()} @ #${ev.observation_index}
+                                        </span>
+                                        ${ev.event_timestamp ? `<span style="color:var(--text-muted); margin-left:4px;">(${ev.event_timestamp})</span>` : ''}
+                                        <span style="color:var(--text-subtle); margin-left:6px;">Score: ${ev.score}</span>
+                                    </div>
+                                `).join("")}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    eventsHtml = `<p style="margin-top: 10px; color: var(--emerald); font-size: 12px;">✅ No change points detected (steady regime throughout series).</p>`;
+                }
+
+                let impactHtml = "";
+                if (impactReports.length > 0) {
+                    const imp = impactReports[0];
+                    const shiftSign = (imp.percent_change > 0 ? "+" : "") + (imp.percent_change !== null ? imp.percent_change + "%" : "N/A");
+                    impactHtml = `
+                        <div style="margin-top: 14px; padding: 12px; background: rgba(15, 23, 42, 0.7); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-weight: 600; font-size: 13px;">Statistical Impact Summary</span>
+                                <span class="badge ${imp.severity === 'critical' ? 'badge-danger' : 'badge-live'}" style="font-size: 11px;">${imp.severity.toUpperCase()} SEVERITY</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; font-size: 12px;">
+                                <div><span style="color:var(--text-muted);">Pre-Change Mean:</span> <strong>${imp.pre_mean}</strong></div>
+                                <div><span style="color:var(--text-muted);">Post-Change Mean:</span> <strong>${imp.post_mean}</strong></div>
+                                <div><span style="color:var(--text-muted);">Delta Shift:</span> <strong style="color:${imp.absolute_change > 0 ? 'var(--rose)' : 'var(--cyan)'};">${imp.absolute_change} (${shiftSign})</strong></div>
+                                <div><span style="color:var(--text-muted);">Cohen's d:</span> <strong>${imp.cohen_d} (${imp.effect_size_category})</strong></div>
+                            </div>
+                            ${imp.summary_sentence ? `<p style="margin-top: 8px; font-size: 12px; color: var(--text-muted); font-style: italic;">"${imp.summary_sentence}"</p>` : ''}
+                        </div>
+                    `;
+                }
+
+                contentArea.innerHTML = `
+                    <div style="display: flex; gap: 16px; flex-wrap: wrap; color: var(--text-muted); font-size: 12px; margin-bottom: 6px;">
+                        <div><strong>Execution Time:</strong> ${run.execution_time_ms} ms</div>
+                        <div><strong>Parameters:</strong> ${paramsStr}</div>
+                        <div><strong>Saved Timestamp:</strong> ${run.created_at ? run.created_at.replace("T", " ") : "-"}</div>
+                    </div>
+                    ${eventsHtml}
+                    ${impactHtml}
+                `;
+            } catch (err) {
+                contentArea.innerHTML = `<p style="color:var(--rose);">Error loading run: ${err.message}</p>`;
+            }
+        };
+
+        window.deleteHistoryRun = async function(runId) {
+            if (!confirm(`Are you sure you want to permanently delete Run #${runId} from MySQL?`)) {
+                return;
+            }
+            try {
+                const resp = await fetchFromApi(`/api/runs/${runId}`, { method: "DELETE" });
+                if (resp && resp.ok) {
+                    showToast(`✓ Run #${runId} deleted from MySQL`, "success");
+                    cachedHistoryRuns = cachedHistoryRuns.filter(r => r.id !== runId);
+                    if (activeDetailedRun && activeDetailedRun.id === runId) {
+                        window.closeHistoryDetail();
+                    }
+                    renderHistoryTable();
+                } else {
+                    showToast(`Failed to delete Run #${runId}`, "error");
+                }
+            } catch (err) {
+                showToast(`Error deleting run: ${err.message}`, "error");
+            }
+        };
+
+        // Overlay run events onto active workbench chart
+        document.getElementById("detail-overlay-btn")?.addEventListener("click", () => {
+            if (!activeDetailedRun) return;
+
+            if (currentDatasetName !== activeDetailedRun.dataset_name) {
+                const confirmed = confirm(
+                    `This run was recorded for dataset "${activeDetailedRun.dataset_name}", but current dataset is "${currentDatasetName}".\n\nWould you like to switch to "${activeDetailedRun.dataset_name}"?`
+                );
+                if (confirmed) {
+                    currentDatasetName = activeDetailedRun.dataset_name;
+                    datasetSelect.value = currentDatasetName;
+                    loadDataset(currentDatasetName);
+                }
+                return;
+            }
+
+            // Map events from run
+            detectedEvents = (activeDetailedRun.events || []).map(e => ({
+                index: e.observation_index,
+                timestamp: e.event_timestamp ? new Date(e.event_timestamp) : null,
+                direction: e.direction,
+                score: e.score,
+                metadata: e.details || {}
+            }));
+
+            // Switch active algorithm dropdown to match run
+            if (activeDetailedRun.algorithm_name) {
+                activeAlgorithm = activeDetailedRun.algorithm_name.toLowerCase();
+                const matchedOption = Array.from(algoSelect.options).find(o => o.value.toLowerCase() === activeAlgorithm);
+                if (matchedOption) algoSelect.value = matchedOption.value;
+            }
+
+            // Render chart & navigator
+            renderChart(filteredDataset);
+            renderNavigatorStrip();
+            window.closeHistoryModal();
+            showToast(`✓ Overlaid Run #${activeDetailedRun.id} (${detectedEvents.length} events) on active chart`, "success");
+        });
+
+        // Detail JSON export
+        document.getElementById("detail-json-btn")?.addEventListener("click", () => {
+            if (!activeDetailedRun) return;
+            const blob = new Blob([JSON.stringify(activeDetailedRun, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `patterntime_run_${activeDetailedRun.id}_${activeDetailedRun.dataset_name.replace(/\.csv$/, '')}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast(`Exported Run #${activeDetailedRun.id} as JSON`, "success");
+        });
+
+        // Search & Filter event listeners
+        document.getElementById("history-search")?.addEventListener("input", renderHistoryTable);
+        document.getElementById("history-dataset-filter")?.addEventListener("change", renderHistoryTable);
+        document.getElementById("history-refresh-btn")?.addEventListener("click", window.loadHistoryRuns);
+
         // Initial Load
+        datasetSelect.value = currentDatasetName;
         loadDataset(currentDatasetName);
     </script>
 </body>

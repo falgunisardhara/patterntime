@@ -26,6 +26,14 @@ from patterntime.impact import (
     classify_severity,
     compute_segment_stats,
 )
+from patterntime.storage import (
+    ChangeEventModel,
+    DatabaseStorage,
+    DatasetModel,
+    DetectionRunModel,
+    ImpactReportModel,
+    get_db_url,
+)
 from patterntime.validator import (
     DuplicateTimestampError,
     EmptyDataError,
@@ -80,5 +88,11 @@ __all__ = [
     "DuplicateTimestampError",
     "MissingValueError",
     "ZeroVarianceError",
-    "NoNumericMetricsError",
+    # Storage & Persistence
+    "DatabaseStorage",
+    "get_db_url",
+    "DatasetModel",
+    "DetectionRunModel",
+    "ChangeEventModel",
+    "ImpactReportModel",
 ]

@@ -42,8 +42,8 @@ class DetectionResult:
 
     events: list[ChangeEvent]
     algorithm_name: str
-    params: dict[str, Any]
-    execution_time_ms: float
+    params: dict[str, Any] = field(default_factory=dict)
+    execution_time_ms: float = 0.0
 
     @property
     def indices(self) -> list[int]:

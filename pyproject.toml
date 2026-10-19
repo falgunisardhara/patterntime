@@ -13,7 +13,14 @@ dependencies = [
     "pandas>=2.0.0",
     "scipy>=1.12.0",
     "python-dateutil>=2.8.0",
+    "sqlalchemy>=2.0.0",
+    "pymysql>=1.1.0",
+    "python-dotenv>=1.0.0",
+    "cryptography>=42.0.0",
 ]
+
+[project.scripts]
+patterntime = "patterntime.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
