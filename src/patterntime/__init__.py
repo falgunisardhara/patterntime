@@ -26,6 +26,12 @@ from patterntime.impact import (
     classify_severity,
     compute_segment_stats,
 )
+from patterntime.gate import (
+    GateCheckResult,
+    GateReport,
+    GateRuleConfig,
+    evaluate_gate,
+)
 from patterntime.profiler import (
     EndpointProfile,
     ProfileReport,
@@ -106,4 +112,9 @@ __all__ = [
     "ProfileReport",
     "find_grouping_columns",
     "profile_endpoints",
+    # CI/CD Quality Gate
+    "GateRuleConfig",
+    "GateCheckResult",
+    "GateReport",
+    "evaluate_gate",
 ]

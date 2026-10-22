@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Sequence
@@ -114,6 +115,55 @@ def build_parser() -> argparse.ArgumentParser:
     )
     prof_parser.add_argument("--min-samples", type=int, default=15, help="Minimum requests required to run change detection (default: 15)")
     prof_parser.add_argument("--json", action="store_true", help="Output profile report as JSON")
+
+    # -----------------------------------------------------------------------
+    # Gate command (CI/CD Performance Regression Quality Gate)
+    # -----------------------------------------------------------------------
+    gate_parser = subparsers.add_parser(
+        "gate",
+        help="CI/CD Performance Quality Gate: evaluate telemetry against baselines/SLAs",
+    )
+    gate_parser.add_argument("candidate_path", type=str, help="Path to candidate telemetry CSV file")
+    gate_parser.add_argument("--baseline", type=str, default=None, help="Path to baseline telemetry CSV file")
+    gate_parser.add_argument("--metric", type=str, default=None, help="Target metric column (auto-detected if omitted)")
+    gate_parser.add_argument("--max-cohen-d", type=float, default=0.8, help="Maximum allowed Cohen's d effect size (default: 0.8)")
+    gate_parser.add_argument("--max-pct-increase", type=float, default=20.0, help="Maximum allowed latency percent increase (default: 20.0)")
+    gate_parser.add_argument("--max-error-rate", type=float, default=5.0, help="Maximum allowed error rate percent (default: 5.0)")
+    gate_parser.add_argument(
+        "--fail-on",
+        type=str,
+        default="critical,high",
+        help="Comma-separated severity levels that fail the gate (default: critical,high)",
+    )
+    gate_parser.add_argument("--per-endpoint", action="store_true", help="Profile and enforce quality gate across individual API routes")
+    gate_parser.add_argument("--group-by", type=str, default=None, help="Route dimension column (auto-detected if omitted)")
+    gate_parser.add_argument("--status-col", type=str, default=None, help="Status code column (auto-detected if omitted)")
+    gate_parser.add_argument(
+        "--algorithm",
+        type=str,
+        default="ewma",
+        choices=["sliding_window", "cusum", "robust_cusum", "ewma"],
+        help="Detection algorithm for in-series checks (default: ewma)",
+    )
+    gate_parser.add_argument("--threshold", type=float, default=None, help="Detection threshold/control limit override")
+    gate_parser.add_argument("--min-samples", type=int, default=15, help="Minimum requests required to profile route (default: 15)")
+    gate_parser.add_argument(
+        "--output-summary",
+        type=str,
+        nargs="?",
+        const="patterntime_summary.md",
+        default=None,
+        help="Path to output GitHub Step Summary markdown file (defaults to patterntime_summary.md or $GITHUB_STEP_SUMMARY)",
+    )
+    gate_parser.add_argument(
+        "--format",
+        type=str,
+        default="text",
+        choices=["text", "json", "markdown"],
+        help="Output format on stdout (default: text)",
+    )
+    gate_parser.add_argument("--no-color", action="store_true", help="Disable colored terminal output")
+    gate_parser.add_argument("--quiet", action="store_true", help="Suppress non-error stdout (only exit code)")
 
     # -----------------------------------------------------------------------
     # Serve command (local API and UI server)
@@ -474,6 +524,87 @@ def handle_profile(args: argparse.Namespace) -> int:
     return 0
 
 
+def handle_gate(args: argparse.Namespace) -> int:
+    """Handle CI/CD performance regression quality gate evaluation."""
+    from patterntime.gate import GateRuleConfig, evaluate_gate
+
+    candidate_file = Path(args.candidate_path)
+    if not candidate_file.exists():
+        print(f"[ERROR] Candidate file '{args.candidate_path}' not found.", file=sys.stderr)
+        return 2
+
+    try:
+        df_cand = pd.read_csv(candidate_file)
+    except Exception as err:
+        print(f"[ERROR] Failed to read candidate CSV: {err}", file=sys.stderr)
+        return 2
+
+    df_base = None
+    baseline_name = None
+    if args.baseline:
+        base_file = Path(args.baseline)
+        if not base_file.exists():
+            print(f"[ERROR] Baseline file '{args.baseline}' not found.", file=sys.stderr)
+            return 2
+        try:
+            df_base = pd.read_csv(base_file)
+            baseline_name = base_file.name
+        except Exception as err:
+            print(f"[ERROR] Failed to read baseline CSV: {err}", file=sys.stderr)
+            return 2
+
+    severities = [s.strip().lower() for s in args.fail_on.split(",") if s.strip()]
+
+    config = GateRuleConfig(
+        metric=args.metric,
+        baseline_path=args.baseline,
+        max_cohen_d=args.max_cohen_d,
+        max_pct_increase=args.max_pct_increase,
+        max_error_rate_pct=args.max_error_rate,
+        fail_on_severity=severities,
+        per_endpoint=args.per_endpoint,
+        group_col=args.group_by,
+        status_col=args.status_col,
+        algorithm=args.algorithm,
+        threshold=args.threshold,
+        min_samples=args.min_samples,
+    )
+
+    try:
+        report = evaluate_gate(
+            df=df_cand,
+            dataset_name=candidate_file.name,
+            config=config,
+            df_baseline=df_base,
+            baseline_name=baseline_name,
+        )
+    except Exception as err:
+        print(f"[ERROR] Gate evaluation failed: {err}", file=sys.stderr)
+        return 2
+
+    # Write GitHub Actions Step Summary if requested or if GITHUB_STEP_SUMMARY env var is set
+    summary_target = args.output_summary or os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary_target:
+        summary_path = Path(summary_target)
+        try:
+            summary_path.parent.mkdir(parents=True, exist_ok=True)
+            summary_path.write_text(report.to_markdown(), encoding="utf-8")
+        except Exception as err:
+            print(f"[WARNING] Failed to write summary markdown to '{summary_target}': {err}", file=sys.stderr)
+
+    if not args.quiet:
+        if args.format == "json":
+            print(json.dumps(report.to_dict(), indent=2))
+        elif args.format == "markdown":
+            print(report.to_markdown())
+        else:
+            use_color = not args.no_color and sys.stdout.isatty()
+            print(report.to_terminal_text(use_color=use_color))
+
+    # Exit code: 0 if passed, 1 if failed
+    return 0 if report.passed else 1
+
+
 def handle_serve(args: argparse.Namespace) -> int:
     """Start local API and UI server."""
     from patterntime.server import run_server
@@ -506,6 +637,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return handle_datasets(args)
     if args.subcommand == "profile":
         return handle_profile(args)
+    if args.subcommand == "gate":
+        return handle_gate(args)
     if args.subcommand == "serve":
         return handle_serve(args)
 
