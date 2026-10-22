@@ -98,6 +98,24 @@ def build_parser() -> argparse.ArgumentParser:
     list_ds_parser.add_argument("--json", action="store_true", help="Output as JSON")
 
     # -----------------------------------------------------------------------
+    # Profile command (Per-Endpoint decomposition)
+    # -----------------------------------------------------------------------
+    prof_parser = subparsers.add_parser("profile", help="Decompose logs by API endpoint and isolate regressions")
+    prof_parser.add_argument("csv_path", type=str, help="Path to telemetry CSV file")
+    prof_parser.add_argument("--group-by", type=str, default=None, help="Categorical column to group by (default: auto-detected, e.g. api_name)")
+    prof_parser.add_argument("--metric", type=str, default=None, help="Metric column to profile (default: auto-detected, e.g. execution_time_ms)")
+    prof_parser.add_argument("--status-col", type=str, default=None, help="Status code column for error rate calculations")
+    prof_parser.add_argument(
+        "--algorithm",
+        type=str,
+        default="ewma",
+        choices=["sliding_window", "cusum", "robust_cusum", "ewma"],
+        help="Detection algorithm per endpoint (default: ewma)",
+    )
+    prof_parser.add_argument("--min-samples", type=int, default=15, help="Minimum requests required to run change detection (default: 15)")
+    prof_parser.add_argument("--json", action="store_true", help="Output profile report as JSON")
+
+    # -----------------------------------------------------------------------
     # Serve command (local API and UI server)
     # -----------------------------------------------------------------------
     serve_parser = subparsers.add_parser("serve", help="Start local API and static web server")
@@ -399,6 +417,63 @@ def handle_datasets(args: argparse.Namespace) -> int:
     return 0
 
 
+def handle_profile(args: argparse.Namespace) -> int:
+    """Handle per-endpoint API telemetry profiling."""
+    csv_file = Path(args.csv_path)
+    if not csv_file.exists():
+        print(f"[ERROR] File not found: {csv_file}", file=sys.stderr)
+        return 1
+
+    try:
+        df = pd.read_csv(csv_file)
+    except Exception as err:
+        print(f"[ERROR] Could not read CSV: {err}", file=sys.stderr)
+        return 1
+
+    try:
+        from patterntime.profiler import profile_endpoints
+        report = profile_endpoints(
+            df=df,
+            group_col=args.group_by,
+            metric_col=args.metric,
+            status_col=args.status_col,
+            algorithm=args.algorithm,
+            min_samples=args.min_samples,
+            dataset_name=csv_file.name,
+        )
+    except Exception as err:
+        print(f"[ERROR] Profiling failed: {err}", file=sys.stderr)
+        return 1
+
+    if args.json:
+        print(json.dumps(report.to_dict(), indent=2))
+        return 0
+
+    print(f"=== API Telemetry Profile: {csv_file.name} ===")
+    print(f"  Grouped By:          {report.group_col}")
+    print(f"  Metric Profiled:     {report.metric_col}")
+    print(f"  Total Requests:      {report.total_requests:,}")
+    print(f"  Unique Endpoints:    {report.total_endpoints}")
+    print(f"  Regressed Routes:    {len(report.regressed_endpoints)}")
+
+    print("\n" + f"{'ENDPOINT':<38} {'CALLS':<8} {'ERR%':<6} {'MEAN':<8} {'P95':<8} {'SHIFTS':<8} {'MAX D':<8} {'SEVERITY'}")
+    print("-" * 102)
+
+    for ep in report.endpoints:
+        sev = ep.max_severity.upper() if ep.max_severity != "none" else "STABLE"
+        err_str = f"{ep.error_rate_pct:.1f}%" if ep.error_count > 0 else "0.0%"
+        d_str = f"{ep.max_cohen_d:.2f}" if ep.max_cohen_d > 0 else "-"
+        name_trunc = (ep.endpoint_name[:35] + "...") if len(ep.endpoint_name) > 38 else ep.endpoint_name
+        print(f"{name_trunc:<38} {ep.request_count:<8} {err_str:<6} {ep.mean_latency:<8.1f} {ep.p95_latency:<8.1f} {ep.total_events:<8} {d_str:<8} {sev}")
+
+    if report.regressed_endpoints:
+        print("\n🚨 Identified Performance Regressions:")
+        for r_ep in report.regressed_endpoints[:5]:
+            print(f"  - [{r_ep.max_severity.upper()}] {r_ep.endpoint_name}: {r_ep.summary}")
+
+    return 0
+
+
 def handle_serve(args: argparse.Namespace) -> int:
     """Start local API and UI server."""
     from patterntime.server import run_server
@@ -429,6 +504,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return handle_runs(args)
     if args.subcommand == "datasets":
         return handle_datasets(args)
+    if args.subcommand == "profile":
+        return handle_profile(args)
     if args.subcommand == "serve":
         return handle_serve(args)
 

@@ -103,3 +103,14 @@ def test_api_runs_lifecycle(test_server):
     with urlopen(f"{test_server}/api/runs") as resp:
         data = json.loads(resp.read().decode("utf-8"))
         assert len(data["runs"]) == 0
+
+
+def test_api_profile_endpoint(test_server):
+    """Test GET /api/profile endpoint on user_activities.csv."""
+    with urlopen(f"{test_server}/api/profile?dataset=user_activities.csv&min_samples=50") as resp:
+        assert resp.status == 200
+        data = json.loads(resp.read().decode("utf-8"))
+        assert "endpoints" in data
+        assert "regressed_endpoints" in data
+        assert data["total_requests"] == 9081
+        assert len(data["endpoints"]) > 5

@@ -164,6 +164,38 @@ class PatternTimeHandler(SimpleHTTPRequestHandler):
                 self._send_json({"error": str(err)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
             return
 
+        if path == "/api/profile":
+            try:
+                import pandas as pd
+                from patterntime.profiler import profile_endpoints
+
+                ds_name = query.get("dataset", ["user_activities.csv"])[0]
+                csv_path = Path("data") / ds_name
+                if not csv_path.exists():
+                    csv_path = Path(ds_name)
+                if not csv_path.exists():
+                    self._send_json({"error": f"Dataset file '{ds_name}' not found"}, status=HTTPStatus.NOT_FOUND)
+                    return
+
+                df = pd.read_csv(csv_path)
+                group_col = query.get("group_by", [None])[0]
+                metric_col = query.get("metric", [None])[0]
+                algo = query.get("algorithm", ["ewma"])[0]
+                min_s = int(query.get("min_samples", [20])[0])
+
+                report = profile_endpoints(
+                    df=df,
+                    group_col=group_col,
+                    metric_col=metric_col,
+                    algorithm=algo,
+                    min_samples=min_s,
+                    dataset_name=csv_path.name,
+                )
+                self._send_json(report.to_dict())
+            except Exception as err:
+                self._send_json({"error": str(err)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+
         self._send_json({"error": "API route not found"}, status=HTTPStatus.NOT_FOUND)
 
     def _handle_api_post(self, path: str, data: dict[str, Any]) -> None:

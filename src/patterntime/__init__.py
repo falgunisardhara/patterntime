@@ -26,6 +26,12 @@ from patterntime.impact import (
     classify_severity,
     compute_segment_stats,
 )
+from patterntime.profiler import (
+    EndpointProfile,
+    ProfileReport,
+    find_grouping_columns,
+    profile_endpoints,
+)
 from patterntime.storage import (
     ChangeEventModel,
     DatabaseStorage,
@@ -95,4 +101,9 @@ __all__ = [
     "DetectionRunModel",
     "ChangeEventModel",
     "ImpactReportModel",
+    # Per-Endpoint Profiler
+    "EndpointProfile",
+    "ProfileReport",
+    "find_grouping_columns",
+    "profile_endpoints",
 ]

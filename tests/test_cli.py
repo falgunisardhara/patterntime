@@ -105,3 +105,24 @@ def test_cli_detect_and_runs(capsys, monkeypatch, tmp_path):
     assert code == 0
     captured = capsys.readouterr()
     assert "sample_api_metrics.csv" in captured.out
+
+
+def test_cli_profile(capsys):
+    """Test CLI profile subcommand on user_activities.csv."""
+    code = main(["profile", "data/user_activities.csv", "--min-samples", "50"])
+    assert code == 0
+    captured = capsys.readouterr()
+    assert "API Telemetry Profile" in captured.out
+    assert "api_name" in captured.out
+    assert "host/getEventAttended" in captured.out
+
+
+def test_cli_profile_json(capsys):
+    """Test CLI profile subcommand with JSON output."""
+    code = main(["profile", "data/user_activities.csv", "--min-samples", "50", "--json"])
+    assert code == 0
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert "endpoints" in data
+    assert "regressed_endpoints" in data
+    assert data["total_requests"] == 9081

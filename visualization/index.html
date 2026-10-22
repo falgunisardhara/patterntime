@@ -1066,7 +1066,12 @@
 
                     <!-- Dynamic Endpoint / Dimension Filter -->
                     <div class="form-group" id="dimension-filter-group" style="display: none;">
-                        <label for="dimension-select">Filter by Endpoint / Route</label>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label for="dimension-select" style="margin-bottom: 0;">Endpoint / Route</label>
+                            <button class="btn btn-subtle" id="open-profiler-btn" style="padding: 2px 7px; font-size: 11px; color: var(--cyan); border-color: rgba(6, 182, 212, 0.4);" title="View regression rankings across all routes">
+                                ⚡ Profile Routes
+                            </button>
+                        </div>
                         <select id="dimension-select">
                             <option value="__all__">All Endpoints (Entire Series)</option>
                         </select>
@@ -1142,6 +1147,16 @@
             <main class="main-content">
                 <!-- ECharts Panel -->
                 <section class="chart-panel">
+                    <!-- Active Endpoint Filter Banner -->
+                    <div id="endpoint-filter-banner" style="display: none; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.35); border-radius: var(--radius-sm); padding: 8px 14px; margin-bottom: 12px; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                            <span style="color: var(--primary-light); font-weight: 600;">Endpoint Scope:</span>
+                            <code id="active-endpoint-name" style="background: var(--bg-card); padding: 3px 8px; border-radius: 4px; color: var(--cyan); font-weight: 600;">all</code>
+                            <span id="active-endpoint-meta" style="color: var(--text-muted); font-size: 12px;">(0 requests)</span>
+                        </div>
+                        <button class="btn btn-subtle" onclick="clearEndpointFilter()" style="padding: 3px 8px; font-size: 11px;">✕ Clear Route Filter</button>
+                    </div>
+
                     <div class="chart-header">
                         <div class="chart-title">
                             <h2 id="chart-heading">Metric Series Over Time</h2>
@@ -1429,6 +1444,86 @@
         </div>
     </div>
 
+    <!-- API Route Profiler Modal -->
+    <div class="modal-backdrop" id="profiler-modal">
+        <div class="modal-card" style="max-width: 1050px; height: 85vh;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.3); display: flex; align-items: center; justify-content: center; color: var(--cyan);">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 16px;">API Route Profiler & Regression Ranking</h3>
+                        <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Decompose telemetry by route, compute reliability metrics (p95, error rate), and isolate regressions.</p>
+                    </div>
+                </div>
+                <button class="btn btn-subtle" onclick="closeProfilerModal()" style="padding: 4px 10px; font-size: 16px;">✕</button>
+            </div>
+
+            <div class="modal-body" style="gap: 16px;">
+                <!-- High-level Metric Stat Cards -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                    <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px;">
+                        <span style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Total Requests</span>
+                        <h4 id="prof-stat-requests" style="font-size: 20px; font-weight: 700; color: var(--text-main); margin-top: 4px;">0</h4>
+                    </div>
+                    <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px;">
+                        <span style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Unique Routes</span>
+                        <h4 id="prof-stat-routes" style="font-size: 20px; font-weight: 700; color: var(--primary-light); margin-top: 4px;">0</h4>
+                    </div>
+                    <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px;">
+                        <span style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Regressed Routes</span>
+                        <h4 id="prof-stat-regressed" style="font-size: 20px; font-weight: 700; color: var(--rose); margin-top: 4px;">0</h4>
+                    </div>
+                    <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px;">
+                        <span style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Overall Latency (μ)</span>
+                        <h4 id="prof-stat-mean" style="font-size: 20px; font-weight: 700; color: var(--cyan); margin-top: 4px;">0.0 ms</h4>
+                    </div>
+                </div>
+
+                <!-- Search & Filtering Controls -->
+                <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 10px; align-items: center; flex: 1; min-width: 320px;">
+                        <input type="text" id="prof-search" class="input" placeholder="Search route name (e.g. resend-otp)..." style="flex: 1; padding: 7px 12px; font-size: 13px; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm);">
+                        <select id="prof-sort" style="padding: 7px 12px; font-size: 13px; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: var(--radius-sm); max-width: 210px;">
+                            <option value="severity">Sort: Regression Severity</option>
+                            <option value="requests">Sort: Request Volume</option>
+                            <option value="latency">Sort: Highest Latency (p95)</option>
+                            <option value="errors">Sort: Highest Error Rate</option>
+                        </select>
+                    </div>
+                    <span id="prof-filter-count" style="font-size: 12px; color: var(--text-muted);">Showing 0 routes</span>
+                </div>
+
+                <!-- Endpoints Table List -->
+                <div class="stats-table-wrapper" style="max-height: 440px; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <th style="padding: 10px 14px;">Endpoint / Route Name</th>
+                                <th style="padding: 10px 14px;">Requests</th>
+                                <th style="padding: 10px 14px;">Errors %</th>
+                                <th style="padding: 10px 14px;">Mean (ms)</th>
+                                <th style="padding: 10px 14px;">p95 (ms)</th>
+                                <th style="padding: 10px 14px;">Shifts</th>
+                                <th style="padding: 10px 14px;">Status / Severity</th>
+                                <th style="padding: 10px 14px; text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="prof-table-body">
+                            <!-- Injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 12px; color: var(--text-muted);">Tip: Click <strong>"Focus Chart"</strong> to isolate an endpoint in the time series.</span>
+                <button class="btn btn-primary" onclick="closeProfilerModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notifications Container -->
     <div class="toast-container" id="toast-container"></div>
 
@@ -1545,10 +1640,23 @@
             const panel = document.getElementById("history-detail-panel");
             if (panel) panel.style.display = "none";
         };
+        window.openProfilerModal = function() {
+            document.getElementById("profiler-modal").classList.add("open");
+            if (typeof window.renderProfilerData === "function") {
+                window.renderProfilerData();
+            }
+        };
+        window.closeProfilerModal = function() {
+            document.getElementById("profiler-modal").classList.remove("open");
+        };
 
         const historyModalBtn = document.getElementById("history-modal-btn");
         if (historyModalBtn) {
             historyModalBtn.addEventListener("click", window.openHistoryModal);
+        }
+        const openProfilerBtn = document.getElementById("open-profiler-btn");
+        if (openProfilerBtn) {
+            openProfilerBtn.addEventListener("click", window.openProfilerModal);
         }
         helpBtn.addEventListener("click", window.openHelpModal);
         previewDataBtn.addEventListener("click", window.openPreviewModal);
@@ -1561,6 +1669,9 @@
         });
         document.getElementById("history-modal").addEventListener("click", e => {
             if (e.target.id === "history-modal") window.closeHistoryModal();
+        });
+        document.getElementById("profiler-modal").addEventListener("click", e => {
+            if (e.target.id === "profiler-modal") window.closeProfilerModal();
         });
 
         // -------------------------------------------------------------
@@ -1990,21 +2101,34 @@
 
             if (dimensionColumns.length > 0) {
                 const dimCol = dimensionColumns[0];
-                const uniqueVals = [...new Set(rows.map(r => r[dimCol]).filter(Boolean))].slice(0, 40);
+                const countMap = {};
+                rows.forEach(r => {
+                    const v = r[dimCol];
+                    if (v) countMap[v] = (countMap[v] || 0) + 1;
+                });
+
+                const uniqueVals = Object.keys(countMap).sort((a, b) => countMap[b] - countMap[a]);
 
                 if (uniqueVals.length > 1) {
-                    uniqueVals.sort().forEach(val => {
+                    uniqueVals.slice(0, 60).forEach(val => {
                         const opt = document.createElement("option");
                         opt.value = val;
-                        opt.textContent = `${val} (${rows.filter(r => r[dimCol] === val).length} calls)`;
+                        opt.textContent = `${val} (${countMap[val].toLocaleString()} calls)`;
                         dimensionSelect.appendChild(opt);
                     });
-                    dimensionGroup.style.display = "flex";
+                    dimensionGroup.style.display = "block";
                     return;
                 }
             }
             dimensionGroup.style.display = "none";
         }
+
+        window.clearEndpointFilter = function() {
+            selectedDimension = "__all__";
+            if (dimensionSelect) dimensionSelect.value = "__all__";
+            applyFilterAndRender(currentDatasetName);
+            showToast("Showing all endpoints", "info");
+        };
 
         function updateDataPreviewModal(headers, rows) {
             document.getElementById("preview-meta-rows").textContent = `Total Rows: ${rows.length.toLocaleString()}`;
@@ -2024,8 +2148,19 @@
             const dimCol = dimensionColumns.length ? dimensionColumns[0] : null;
 
             let filtered = rawDataset;
+            const filterBanner = document.getElementById("endpoint-filter-banner");
+            const activeEpName = document.getElementById("active-endpoint-name");
+            const activeEpMeta = document.getElementById("active-endpoint-meta");
+
             if (dimCol && selectedDimension !== "__all__") {
                 filtered = rawDataset.filter(r => r[dimCol] === selectedDimension);
+                if (filterBanner) {
+                    filterBanner.style.display = "flex";
+                    if (activeEpName) activeEpName.textContent = selectedDimension;
+                    if (activeEpMeta) activeEpMeta.textContent = `(${filtered.length.toLocaleString()} requests)`;
+                }
+            } else {
+                if (filterBanner) filterBanner.style.display = "none";
             }
 
             // Filter out rows missing metric or timestamp
@@ -3302,6 +3437,301 @@
         document.getElementById("history-search")?.addEventListener("input", renderHistoryTable);
         document.getElementById("history-dataset-filter")?.addEventListener("change", renderHistoryTable);
         document.getElementById("history-refresh-btn")?.addEventListener("click", window.loadHistoryRuns);
+
+        // -------------------------------------------------------------
+        // Per-Endpoint API Route Profiler & Regression Isolation
+        // -------------------------------------------------------------
+        let cachedProfiles = [];
+
+        function escapeHtml(str) {
+            if (str == null) return "";
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function escapeQuote(str) {
+            return String(str).replace(/'/g, "\\'").replace(/"/g, "&quot;");
+        }
+
+        window.renderProfilerData = async function() {
+            const tableBody = document.getElementById("prof-table-body");
+            const statRequests = document.getElementById("prof-stat-requests");
+            const statRoutes = document.getElementById("prof-stat-routes");
+            const statRegressed = document.getElementById("prof-stat-regressed");
+            const statMean = document.getElementById("prof-stat-mean");
+
+            if (!tableBody) return;
+
+            tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);"><span class="badge badge-live">Profiling routes across dataset...</span></td></tr>`;
+
+            let profiles = [];
+            let totalRequests = 0;
+            let totalRoutes = 0;
+            let totalRegressed = 0;
+            let avgMeanLatency = 0;
+
+            // 1. Attempt API server profile endpoint
+            try {
+                const queryParams = new URLSearchParams({
+                    dataset: currentDatasetName,
+                    algorithm: activeAlgorithm,
+                    min_samples: "15"
+                });
+                if (selectedMetric) queryParams.set("metric", selectedMetric);
+                if (dimensionColumns.length > 0) queryParams.set("group_by", dimensionColumns[0]);
+
+                const resp = await fetchFromApi(`/api/profile?${queryParams.toString()}`);
+                if (resp && resp.ok) {
+                    const data = await resp.json();
+                    if (data.endpoints && data.endpoints.length > 0) {
+                        profiles = data.endpoints;
+                        totalRequests = data.total_requests;
+                        totalRoutes = data.total_endpoints;
+                        totalRegressed = (data.regressed_endpoints || []).length;
+                        const sumMean = profiles.reduce((acc, p) => acc + (p.mean_latency * p.request_count), 0);
+                        avgMeanLatency = totalRequests > 0 ? (sumMean / totalRequests) : 0;
+                    }
+                }
+            } catch (err) {
+                console.warn("Server API profiler not reachable or failed, falling back to client-side profiling:", err);
+            }
+
+            // 2. Client-side Fallback (if server unavailable or uploaded dataset)
+            if (profiles.length === 0 && rawDataset.length > 0) {
+                const dimCol = dimensionColumns.length > 0 ? dimensionColumns[0] : (
+                    Object.keys(rawDataset[0] || {}).find(k => /api|route|endpoint|url|action|controller|name/i.test(k))
+                );
+
+                if (!dimCol) {
+                    tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">No endpoint or categorical route column found in this dataset.</td></tr>`;
+                    return;
+                }
+
+                const metricCol = selectedMetric || numericColumns[0];
+                const statusCol = Object.keys(rawDataset[0] || {}).find(k => /status|code|http|response/i.test(k));
+
+                // Group by route
+                const groups = {};
+                rawDataset.forEach(row => {
+                    const ep = String(row[dimCol] || "").trim();
+                    if (!ep) return;
+                    if (!groups[ep]) {
+                        groups[ep] = { requests: 0, errors: 0, latencies: [] };
+                    }
+                    groups[ep].requests += 1;
+                    if (statusCol) {
+                        const sc = parseInt(row[statusCol], 10);
+                        if (!isNaN(sc) && sc >= 400) groups[ep].errors += 1;
+                    }
+                    if (metricCol) {
+                        const val = parseFloat(row[metricCol]);
+                        if (!isNaN(val)) groups[ep].latencies.push(val);
+                    }
+                });
+
+                profiles = Object.entries(groups).map(([epName, g]) => {
+                    const count = g.requests;
+                    const errRate = count > 0 ? (g.errors / count) * 100 : 0;
+                    const lats = g.latencies.slice().sort((a, b) => a - b);
+                    const n = lats.length;
+                    const sum = lats.reduce((a, b) => a + b, 0);
+                    const mean = n > 0 ? sum / n : 0;
+                    const median = n > 0 ? lats[Math.floor(n / 2)] : 0;
+                    const p95 = n > 0 ? lats[Math.min(n - 1, Math.floor(n * 0.95))] : 0;
+                    const p99 = n > 0 ? lats[Math.min(n - 1, Math.floor(n * 0.99))] : 0;
+                    const min = n > 0 ? lats[0] : 0;
+                    const max = n > 0 ? lats[n - 1] : 0;
+
+                    // Quick Cohen's d shift estimate
+                    let cohenD = 0;
+                    let eventsCount = 0;
+                    let severity = "none";
+                    if (n >= 10) {
+                        const mid = Math.floor(n / 2);
+                        const firstHalf = lats.slice(0, mid);
+                        const secondHalf = lats.slice(mid);
+                        const m1 = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
+                        const m2 = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
+                        const var1 = firstHalf.reduce((acc, v) => acc + (v - m1)**2, 0) / (firstHalf.length - 1 || 1);
+                        const var2 = secondHalf.reduce((acc, v) => acc + (v - m2)**2, 0) / (secondHalf.length - 1 || 1);
+                        const pooledSd = Math.sqrt((var1 + var2) / 2) || 1;
+                        cohenD = Math.abs(m2 - m1) / pooledSd;
+                        if (cohenD >= 0.8 && (m2 - m1) > 20) {
+                            severity = cohenD >= 1.2 ? "critical" : "high";
+                            eventsCount = 1;
+                        } else if (cohenD >= 0.5 && (m2 - m1) > 10) {
+                            severity = "medium";
+                            eventsCount = 1;
+                        } else if (cohenD >= 0.2) {
+                            severity = "low";
+                        }
+                    }
+
+                    return {
+                        endpoint_name: epName,
+                        request_count: count,
+                        error_count: g.errors,
+                        error_rate_pct: Math.round(errRate * 100) / 100,
+                        mean_latency: Math.round(mean * 100) / 100,
+                        median_latency: Math.round(median * 100) / 100,
+                        p95_latency: Math.round(p95 * 100) / 100,
+                        p99_latency: Math.round(p99 * 100) / 100,
+                        min_latency: Math.round(min * 100) / 100,
+                        max_latency: Math.round(max * 100) / 100,
+                        total_events: eventsCount,
+                        max_severity: severity,
+                        max_cohen_d: Math.round(cohenD * 100) / 100,
+                        summary: `${epName}: ${count} requests, p95=${p95.toFixed(1)}ms`
+                    };
+                });
+
+                totalRequests = rawDataset.length;
+                totalRoutes = profiles.length;
+                totalRegressed = profiles.filter(p => ["critical", "high", "medium"].includes(p.max_severity)).length;
+                const sumMean = profiles.reduce((acc, p) => acc + (p.mean_latency * p.request_count), 0);
+                avgMeanLatency = totalRequests > 0 ? (sumMean / totalRequests) : 0;
+            }
+
+            cachedProfiles = profiles;
+
+            // Update modal stat summary cards
+            if (statRequests) statRequests.textContent = totalRequests.toLocaleString();
+            if (statRoutes) statRoutes.textContent = totalRoutes.toLocaleString();
+            if (statRegressed) {
+                statRegressed.textContent = totalRegressed.toString();
+                statRegressed.style.color = totalRegressed > 0 ? "var(--rose)" : "var(--emerald)";
+            }
+            if (statMean) statMean.textContent = `${avgMeanLatency.toFixed(1)} ms`;
+
+            renderProfilerTableRows();
+        };
+
+        function renderProfilerTableRows() {
+            const tableBody = document.getElementById("prof-table-body");
+            const searchInput = document.getElementById("prof-search");
+            const sortSelect = document.getElementById("prof-sort");
+            const filterCount = document.getElementById("prof-filter-count");
+
+            if (!tableBody) return;
+
+            const query = (searchInput ? searchInput.value : "").trim().toLowerCase();
+            const sortBy = sortSelect ? sortSelect.value : "severity";
+
+            let filtered = cachedProfiles.slice();
+            if (query) {
+                filtered = filtered.filter(p => p.endpoint_name.toLowerCase().includes(query));
+            }
+
+            // Severity rank map for sorting
+            const severityRank = { "critical": 5, "high": 4, "medium": 3, "low": 2, "negligible": 1, "none": 0 };
+
+            filtered.sort((a, b) => {
+                if (sortBy === "severity") {
+                    const diff = (severityRank[b.max_severity] || 0) - (severityRank[a.max_severity] || 0);
+                    if (diff !== 0) return diff;
+                    return (b.max_cohen_d || 0) - (a.max_cohen_d || 0);
+                } else if (sortBy === "requests") {
+                    return b.request_count - a.request_count;
+                } else if (sortBy === "latency") {
+                    return b.p95_latency - a.p95_latency;
+                } else if (sortBy === "errors") {
+                    return b.error_rate_pct - a.error_rate_pct;
+                }
+                return 0;
+            });
+
+            if (filterCount) {
+                filterCount.textContent = `Showing ${filtered.length} of ${cachedProfiles.length} routes`;
+            }
+
+            if (filtered.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                            No routes match your search criteria.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tableBody.innerHTML = "";
+            filtered.forEach(p => {
+                const tr = document.createElement("tr");
+                tr.style.borderBottom = "1px solid var(--border-color)";
+                tr.style.transition = "background-color 0.15s ease";
+                tr.onmouseenter = () => tr.style.backgroundColor = "rgba(255, 255, 255, 0.03)";
+                tr.onmouseleave = () => tr.style.backgroundColor = "transparent";
+
+                // Error rate formatting
+                let errBadge = `<span style="color: var(--emerald); font-weight: 500;">${p.error_rate_pct}%</span>`;
+                if (p.error_rate_pct > 5) {
+                    errBadge = `<span class="badge badge-danger" style="font-size: 11px;">${p.error_rate_pct}%</span>`;
+                } else if (p.error_rate_pct > 0) {
+                    errBadge = `<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: var(--amber); font-size: 11px;">${p.error_rate_pct}%</span>`;
+                }
+
+                // Severity badge formatting
+                let sevBadge = `<span class="badge badge-live" style="font-size: 11px;">HEALTHY</span>`;
+                if (p.max_severity === "critical") {
+                    sevBadge = `<span class="badge badge-danger" style="font-size: 11px; font-weight: 700;">CRITICAL (d=${p.max_cohen_d})</span>`;
+                } else if (p.max_severity === "high") {
+                    sevBadge = `<span class="badge" style="background: rgba(244, 63, 94, 0.2); color: var(--rose); font-size: 11px; font-weight: 600;">HIGH (d=${p.max_cohen_d})</span>`;
+                } else if (p.max_severity === "medium") {
+                    sevBadge = `<span class="badge" style="background: rgba(245, 158, 11, 0.2); color: var(--amber); font-size: 11px;">MEDIUM</span>`;
+                } else if (p.max_severity === "low") {
+                    sevBadge = `<span class="badge" style="background: rgba(6, 182, 212, 0.2); color: var(--cyan); font-size: 11px;">LOW</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-main); font-weight: 500; word-break: break-all;">
+                        ${escapeHtml(p.endpoint_name)}
+                    </td>
+                    <td style="padding: 10px 14px; font-weight: 600;">
+                        ${p.request_count.toLocaleString()}
+                    </td>
+                    <td style="padding: 10px 14px;">
+                        ${errBadge}
+                    </td>
+                    <td style="padding: 10px 14px; color: var(--cyan); font-family: 'JetBrains Mono', monospace;">
+                        ${p.mean_latency.toFixed(1)}
+                    </td>
+                    <td style="padding: 10px 14px; color: var(--primary-light); font-weight: 600; font-family: 'JetBrains Mono', monospace;">
+                        ${p.p95_latency.toFixed(1)}
+                    </td>
+                    <td style="padding: 10px 14px; color: ${p.total_events > 0 ? 'var(--amber)' : 'var(--text-muted)'}; font-weight: 600;">
+                        ${p.total_events} ${p.total_events === 1 ? 'shift' : 'shifts'}
+                    </td>
+                    <td style="padding: 10px 14px;">
+                        ${sevBadge}
+                    </td>
+                    <td style="padding: 10px 14px; text-align: right;">
+                        <button class="btn btn-subtle" onclick="window.focusOnEndpoint('${escapeQuote(p.endpoint_name)}')" style="padding: 4px 9px; font-size: 11px; color: var(--primary-light); border-color: rgba(99, 102, 241, 0.3); white-space: nowrap;">
+                            Focus Chart 🎯
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        window.focusOnEndpoint = function(endpointName) {
+            window.closeProfilerModal();
+            selectedDimension = endpointName;
+            if (dimensionSelect) {
+                dimensionSelect.value = endpointName;
+            }
+            applyFilterAndRender(currentDatasetName);
+            showToast(`✓ Focused time series chart on "${endpointName}"`, "success");
+        };
+
+        // Attach profiler filter/sort listeners
+        document.getElementById("prof-search")?.addEventListener("input", renderProfilerTableRows);
+        document.getElementById("prof-sort")?.addEventListener("change", renderProfilerTableRows);
 
         // Initial Load
         datasetSelect.value = currentDatasetName;
