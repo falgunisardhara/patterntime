@@ -975,6 +975,10 @@
             </div>
 
             <div class="header-actions">
+                <a href="executive.html" class="btn" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.4); text-decoration: none;" title="Switch to Plain-English Executive Summary">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    Executive View 👤
+                </a>
                 <button class="btn btn-subtle" id="help-btn">
                     <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 16h-2v-2h2v2zm1.07-7.75l-.9.92C12.45 11.9 12 12.5 12 14h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
                     Guide
@@ -2832,6 +2836,7 @@
         // -------------------------------------------------------------
         datasetSelect.addEventListener("change", e => {
             currentDatasetName = e.target.value;
+            sessionStorage.setItem("patterntime_active_dataset", currentDatasetName);
             loadDataset(currentDatasetName);
         });
 
@@ -2927,6 +2932,21 @@
                     const text = ev.target.result;
                     uploadedFilesMap[file.name] = text;
                     currentDatasetName = file.name;
+                    // Always save lightweight metadata; the raw CSV may exceed the ~5MB
+                    // sessionStorage quota for large files, so we try/catch it gracefully.
+                    try {
+                        sessionStorage.setItem("patterntime_uploaded_text", text);
+                        sessionStorage.setItem("patterntime_uploaded_name", file.name);
+                    } catch (storageErr) {
+                        // QuotaExceededError: file is too large for sessionStorage.
+                        // Data stays available in-memory via uploadedFilesMap — charts
+                        // will work fine this session, but won't survive a page refresh.
+                        console.warn("[PatternTime] sessionStorage quota exceeded for uploaded file; "
+                            + "using in-memory cache only.", storageErr);
+                        sessionStorage.removeItem("patterntime_uploaded_text");
+                        sessionStorage.removeItem("patterntime_uploaded_name");
+                    }
+                    sessionStorage.setItem("patterntime_active_dataset", file.name);
 
                     processCSVData(text, file.name);
 
@@ -3043,6 +3063,38 @@
         }
         checkDbStatus();
 
+        function buildEventDetails(event) {
+            const values = filteredDataset.map(row => cleanNumber(row[selectedMetric]));
+            const index = Number.isInteger(event.index) ? event.index : -1;
+            const windowSize = Math.max(5, Math.min(50, Math.round(values.length * 0.05)));
+            const beforeValues = index >= 0 ? values.slice(Math.max(0, index - windowSize), index) : [];
+            const afterValues = index >= 0 ? values.slice(index, Math.min(values.length, index + windowSize)) : [];
+            const summarize = sample => sample.length ? {
+                count: sample.length,
+                mean: mean(sample),
+                median: median(sample),
+                std: std(sample),
+                min: Math.min(...sample),
+                max: Math.max(...sample)
+            } : null;
+            const before = summarize(beforeValues);
+            const after = summarize(afterValues);
+            const change = before && after ? after.mean - before.mean : null;
+            return {
+                ...(event.metadata && typeof event.metadata === "object" ? event.metadata : {}),
+                metric_name: selectedMetric,
+                observed_value: index >= 0 && index < values.length ? values[index] : null,
+                timestamp: index >= 0 ? timestamps[index] || null : null,
+                context_window_observations: windowSize,
+                before_window: before,
+                after_window: after,
+                window_mean_change: change,
+                window_mean_change_percent: before && before.mean !== 0 && change !== null
+                    ? (change / Math.abs(before.mean)) * 100
+                    : null
+            };
+        }
+
         if (saveDbBtn) {
             saveDbBtn.addEventListener("click", async () => {
                 if (!filteredDataset.length || !detectedEvents.length) {
@@ -3060,14 +3112,14 @@
                     params: {},
                     execution_time_ms: 1.5,
                     row_count: filteredDataset.length,
-                    timestamp_col: timestampColumn,
+                    timestamp_col: selectedTimestamp,
                     metric_cols: numericColumns,
                     events: detectedEvents.map(e => ({
                         index: e.index,
-                        timestamp: e.timestamp,
+                        timestamp: e.timestamp || timestamps[e.index] || null,
                         direction: e.direction || "unknown",
                         score: e.score || 0.0,
-                        metadata: e.metadata || {}
+                        metadata: buildEventDetails(e)
                     })),
                     impact_report: lastReportData ? {
                         change_index: lastReportData.change_index || detectedEvents[0]?.index || 0,
@@ -3102,7 +3154,8 @@
                         const res = await resp.json();
                         showToast(`✓ Run #${res.run_id} saved to MySQL database 'patterntime'`, "success");
                     } else {
-                        showToast("Failed to save run via API.", "error");
+                        const errorBody = resp ? await resp.json().catch(() => ({})) : {};
+                        showToast(errorBody.error || `Failed to save run via API${resp ? ` (HTTP ${resp.status})` : ""}.`, "error");
                     }
                 } catch (err) {
                     showToast("API server not active on port 8089. Run '.venv/bin/patterntime serve' or use CLI.", "info");
@@ -3733,7 +3786,25 @@
         document.getElementById("prof-search")?.addEventListener("input", renderProfilerTableRows);
         document.getElementById("prof-sort")?.addEventListener("change", renderProfilerTableRows);
 
-        // Initial Load
+        // Initial Load with sessionStorage restore
+        const savedUpName = sessionStorage.getItem("patterntime_uploaded_name");
+        const savedUpText = sessionStorage.getItem("patterntime_uploaded_text");
+        if (savedUpName && savedUpText) {
+            uploadedFilesMap[savedUpName] = savedUpText;
+            const customGroup = document.getElementById("custom-uploads-group");
+            if (customGroup && !Array.from(datasetSelect.options).some(o => o.value === savedUpName)) {
+                const opt = document.createElement("option");
+                opt.value = savedUpName;
+                opt.textContent = `Custom: ${savedUpName}`;
+                customGroup.appendChild(opt);
+            }
+        }
+
+        const savedActive = sessionStorage.getItem("patterntime_active_dataset");
+        if (savedActive && (Array.from(datasetSelect.options).some(o => o.value === savedActive) || uploadedFilesMap[savedActive])) {
+            currentDatasetName = savedActive;
+        }
+
         datasetSelect.value = currentDatasetName;
         loadDataset(currentDatasetName);
     </script>

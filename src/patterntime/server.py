@@ -271,7 +271,8 @@ def run_server(host: str = "0.0.0.0", port: int = 8089) -> None:
     """Start the local HTTP server."""
     server = HTTPServer((host, port), PatternTimeHandler)
     print(f"PatternTime Server running at http://{host}:{port}/")
-    print(f"  Interactive Workbench: http://localhost:{port}/visualization/index.html")
+    print(f"  Executive Dashboard:   http://localhost:{port}/visualization/executive.html")
+    print(f"  Engineering Lab:       http://localhost:{port}/visualization/index.html")
     print(f"  Database API Status:   http://localhost:{port}/api/db/status")
     print("Press Ctrl+C to terminate.")
     try:

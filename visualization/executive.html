@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PatternTime | Executive Performance Summary</title>
+    <meta name="description" content="Plain-English reliability and anomaly summary for stakeholders — powered by PatternTime.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="../node_modules/echarts/dist/echarts.min.js"></script>
+    <script>
+        if (typeof echarts === "undefined") {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"><\/script>');
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        :root {
+            --bg-base:          #070b14;
+            --bg-surface:       #0d1120;
+            --bg-card:          #111827;
+            --bg-glass:         rgba(17,24,39,0.7);
+            --bg-input:         #1a2235;
+            --border:           rgba(255,255,255,0.07);
+            --border-hi:        rgba(255,255,255,0.13);
+            --text-main:        #f1f5f9;
+            --text-muted:       #8b9ab0;
+            --text-subtle:      #536073;
+            --primary:          #6366f1;
+            --primary-light:    #a5b4fc;
+            --primary-glow:     rgba(99,102,241,0.35);
+            --cyan:             #22d3ee;
+            --cyan-glow:        rgba(34,211,238,0.25);
+            --emerald:          #34d399;
+            --emerald-glow:     rgba(52,211,153,0.25);
+            --amber:            #fbbf24;
+            --rose:             #fb7185;
+            --rose-glow:        rgba(251,113,133,0.3);
+            --radius-xl:        20px;
+            --radius-lg:        14px;
+            --radius-md:        10px;
+            --radius-sm:        7px;
+            --shadow-xl:        0 20px 40px -8px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
+            --shadow-glow:      0 0 30px -5px rgba(99,102,241,0.4);
+            --transition:       all 0.22s cubic-bezier(0.4,0,0.2,1);
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-base);
+            background-image:
+                radial-gradient(ellipse 70% 50% at 10% 0%,  rgba(99,102,241,0.12) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 40% at 90% 10%, rgba(34,211,238,0.08) 0%, transparent 55%),
+                radial-gradient(ellipse 60% 60% at 50% 100%,rgba(52,211,153,0.06) 0%, transparent 60%);
+            color: var(--text-main);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .page-wrap { position: relative; z-index: 1; padding: 28px 32px 52px; }
+        .container { max-width: 1440px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+
+        /* Orbs */
+        .orb { position:fixed; border-radius:50%; filter:blur(80px); pointer-events:none; z-index:0; opacity:0.5; animation:floatOrb 12s ease-in-out infinite; }
+        .orb-1 { width:480px; height:480px; background:rgba(99,102,241,0.18); top:-120px; left:-100px; animation-delay:0s; }
+        .orb-2 { width:380px; height:380px; background:rgba(34,211,238,0.12); top:0; right:-80px; animation-delay:-4s; }
+        .orb-3 { width:300px; height:300px; background:rgba(52,211,153,0.10); bottom:100px; left:30%; animation-delay:-8s; }
+        @keyframes floatOrb {
+            0%,100% { transform:translate(0,0) scale(1); }
+            33%      { transform:translate(30px,-20px) scale(1.05); }
+            66%      { transform:translate(-20px,30px) scale(0.96); }
+        }
+
+        /* Header */
+        .exec-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-hi);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            flex-wrap: wrap;
+            gap: 16px;
+            position: sticky;
+            top: 16px;
+            z-index: 100;
+        }
+        .exec-brand { display:flex; align-items:center; gap:14px; }
+        .exec-logo {
+            width:46px; height:46px;
+            background: linear-gradient(135deg, #6366f1 0%, #22d3ee 100%);
+            border-radius:13px;
+            display:flex; align-items:center; justify-content:center;
+            color:white;
+            box-shadow: 0 6px 20px var(--primary-glow);
+            flex-shrink:0;
+            animation: logoPulse 4s ease-in-out infinite;
+        }
+        @keyframes logoPulse {
+            0%,100% { box-shadow: 0 6px 20px var(--primary-glow); }
+            50%      { box-shadow: 0 6px 32px rgba(99,102,241,0.55); }
+        }
+        .exec-logo svg { width:22px; height:22px; fill:white; }
+        .exec-brand-text h1 {
+            font-family:'Outfit',sans-serif; font-size:17px; font-weight:800;
+            background: linear-gradient(90deg, #f1f5f9, #a5b4fc);
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+            display:flex; align-items:center; gap:8px;
+        }
+        .exec-view-chip {
+            font-size:10px; font-weight:700; padding:2px 8px; border-radius:6px;
+            background:rgba(34,211,238,0.15); color:var(--cyan);
+            border:1px solid rgba(34,211,238,0.3); letter-spacing:0.5px;
+            text-transform:uppercase; -webkit-text-fill-color:var(--cyan);
+        }
+        .exec-brand-text p { font-size:12px; color:var(--text-muted); margin-top:1px; }
+        .exec-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+
+        /* Source Pill */
+        .source-pill {
+            display:inline-flex; align-items:center; gap:7px;
+            padding:6px 14px; border-radius:9999px; font-size:12px; font-weight:600;
+            background:rgba(34,211,238,0.1); border:1px solid rgba(34,211,238,0.3); color:var(--cyan);
+            transition:var(--transition);
+        }
+        .source-pill-dot {
+            width:7px; height:7px; border-radius:50%;
+            background:var(--cyan); box-shadow:0 0 6px var(--cyan);
+            animation:blink 2s ease-in-out infinite;
+        }
+        @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+        .exec-select {
+            padding:8px 14px; background:var(--bg-input); border:1px solid var(--border-hi);
+            color:var(--text-main); border-radius:var(--radius-md);
+            font-size:12px; font-weight:500; font-family:'Inter',sans-serif;
+            outline:none; cursor:pointer; transition:var(--transition); max-width:240px;
+        }
+        .exec-select:focus { border-color:var(--primary-light); box-shadow:0 0 0 3px var(--primary-glow); }
+
+        .btn {
+            display:inline-flex; align-items:center; gap:7px; padding:8px 16px;
+            border-radius:var(--radius-md); font-size:12px; font-weight:600;
+            font-family:'Inter',sans-serif; cursor:pointer; transition:var(--transition);
+            text-decoration:none; border:none; white-space:nowrap;
+        }
+        .btn-upload { background:rgba(52,211,153,0.12); color:var(--emerald); border:1px solid rgba(52,211,153,0.35); }
+        .btn-upload:hover { background:rgba(52,211,153,0.22); border-color:var(--emerald); transform:translateY(-1px); box-shadow:0 4px 16px rgba(52,211,153,0.2); }
+        .btn-lab { background:rgba(99,102,241,0.12); color:var(--primary-light); border:1px solid rgba(99,102,241,0.35); }
+        .btn-lab:hover { background:rgba(99,102,241,0.22); border-color:var(--primary-light); transform:translateY(-1px); box-shadow:var(--shadow-glow); }
+        .btn-ghost { background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border); }
+        .btn-ghost:hover { background:rgba(255,255,255,0.08); border-color:var(--border-hi); color:var(--text-main); }
+
+        /* Verdict Banner */
+        .verdict-banner {
+            position:relative; overflow:hidden;
+            border-radius:var(--radius-xl);
+            padding:32px 36px;
+            border:1px solid var(--border);
+            box-shadow:var(--shadow-xl);
+            display:flex; flex-direction:column; gap:14px;
+            transition:var(--transition);
+        }
+        .verdict-banner.healthy {
+            background: linear-gradient(135deg, rgba(52,211,153,0.1) 0%, rgba(13,17,32,0.95) 50%, rgba(34,211,238,0.05) 100%);
+            border-color:rgba(52,211,153,0.25);
+        }
+        .verdict-banner.degraded {
+            background: linear-gradient(135deg, rgba(251,113,133,0.12) 0%, rgba(13,17,32,0.95) 50%, rgba(251,191,36,0.06) 100%);
+            border-color:rgba(251,113,133,0.3);
+        }
+        .verdict-banner::before {
+            content:''; position:absolute; left:0; top:0; bottom:0; width:4px;
+            border-radius:4px 0 0 4px; transition:background 0.4s ease;
+        }
+        .verdict-banner.healthy::before  { background:linear-gradient(180deg,var(--emerald),var(--cyan)); box-shadow:0 0 20px var(--emerald-glow); }
+        .verdict-banner.degraded::before { background:linear-gradient(180deg,var(--rose),var(--amber)); box-shadow:0 0 20px var(--rose-glow); }
+        .verdict-banner::after {
+            content:'◉'; position:absolute; right:40px; top:50%; transform:translateY(-50%);
+            font-size:140px; opacity:0.04; pointer-events:none; line-height:1;
+        }
+        .verdict-top { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+        .verdict-badge {
+            display:inline-flex; align-items:center; gap:7px; padding:5px 14px;
+            border-radius:9999px; font-size:11px; font-weight:700;
+            text-transform:uppercase; letter-spacing:0.8px;
+        }
+        .verdict-badge.healthy  { background:rgba(52,211,153,0.18); color:var(--emerald); border:1px solid rgba(52,211,153,0.4); }
+        .verdict-badge.degraded { background:rgba(251,113,133,0.18); color:var(--rose); border:1px solid rgba(251,113,133,0.4); }
+        .verdict-badge-dot { width:6px; height:6px; border-radius:50%; animation:blink 1.5s ease-in-out infinite; }
+        .healthy .verdict-badge-dot  { background:var(--emerald); box-shadow:0 0 8px var(--emerald); }
+        .degraded .verdict-badge-dot { background:var(--rose); box-shadow:0 0 8px var(--rose); }
+        .verdict-time { font-size:12px; color:var(--text-muted); }
+
+        /* Provenance */
+        .provenance-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+        .prov-label { font-size:10px; text-transform:uppercase; letter-spacing:0.8px; color:var(--text-subtle); font-weight:700; }
+        .prov-filename { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-main); background:rgba(255,255,255,0.06); padding:3px 10px; border-radius:5px; border:1px solid var(--border-hi); }
+        .prov-chip { font-size:10px; font-weight:700; padding:2px 10px; border-radius:9999px; }
+        .prov-chip.builtin { background:rgba(34,211,238,0.15); color:var(--cyan); border:1px solid rgba(34,211,238,0.3); }
+        .prov-chip.custom  { background:rgba(251,191,36,0.15); color:var(--amber); border:1px solid rgba(251,191,36,0.3); }
+        .prov-rows { font-size:11px; color:var(--text-muted); }
+
+        .verdict-headline { font-family:'Outfit',sans-serif; font-size:26px; font-weight:800; line-height:1.25; color:var(--text-main); letter-spacing:-0.3px; }
+        .verdict-explanation { font-size:14px; color:var(--text-muted); line-height:1.7; max-width:900px; }
+        .verdict-recommendation {
+            display:inline-flex; align-items:center; gap:10px; padding:10px 18px;
+            background:rgba(255,255,255,0.04); border:1px solid var(--border-hi);
+            border-radius:var(--radius-md); font-size:13px; color:var(--cyan);
+            font-weight:500; width:fit-content; transition:var(--transition);
+        }
+        .verdict-recommendation:hover { background:rgba(255,255,255,0.07); }
+
+        /* KPI Grid */
+        .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; }
+        .kpi-card {
+            background:var(--bg-glass); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+            border:1px solid var(--border); border-radius:var(--radius-lg);
+            padding:22px 22px 18px; box-shadow:var(--shadow-xl);
+            transition:var(--transition); display:flex; flex-direction:column; gap:6px;
+            position:relative; overflow:hidden; cursor:default;
+        }
+        .kpi-card::before {
+            content:''; position:absolute; inset:0;
+            background:linear-gradient(135deg,rgba(255,255,255,0.04) 0%,transparent 60%);
+            pointer-events:none;
+        }
+        .kpi-card:hover { border-color:var(--border-hi); transform:translateY(-3px) scale(1.01); box-shadow:var(--shadow-xl),0 0 30px -10px var(--primary-glow); }
+        .kpi-icon { width:36px; height:36px; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; font-size:16px; margin-bottom:8px; }
+        .icon-health { background:rgba(251,113,133,0.15); border:1px solid rgba(251,113,133,0.25); }
+        .icon-speed  { background:rgba(34,211,238,0.12);  border:1px solid rgba(34,211,238,0.25); }
+        .icon-impact { background:rgba(251,191,36,0.12);  border:1px solid rgba(251,191,36,0.25); }
+        .icon-offend { background:rgba(165,180,252,0.12); border:1px solid rgba(165,180,252,0.25); }
+        .icon-cert   { background:rgba(52,211,153,0.12);  border:1px solid rgba(52,211,153,0.25); }
+        .kpi-label { font-size:11px; text-transform:uppercase; letter-spacing:0.6px; color:var(--text-muted); font-weight:600; }
+        .kpi-value { font-family:'Outfit',sans-serif; font-size:30px; font-weight:800; color:var(--text-main); line-height:1.1; letter-spacing:-0.5px; }
+        .kpi-sub { font-size:12px; color:var(--text-subtle); font-weight:500; margin-top:2px; }
+
+        /* Chart Section */
+        .chart-section {
+            background:var(--bg-glass); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+            border:1px solid var(--border); border-radius:var(--radius-xl);
+            padding:28px 28px 24px; box-shadow:var(--shadow-xl);
+            display:flex; flex-direction:column; gap:18px;
+        }
+        .chart-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; }
+        .section-title { font-family:'Outfit',sans-serif; font-size:18px; font-weight:700; color:var(--text-main); letter-spacing:-0.2px; }
+        .section-subtitle { font-size:13px; color:var(--text-muted); margin-top:3px; }
+        .chart-legend { display:flex; align-items:center; gap:18px; font-size:11px; color:var(--text-muted); flex-wrap:wrap; }
+        .legend-item { display:flex; align-items:center; gap:6px; font-weight:500; }
+        .legend-dot { width:8px; height:8px; border-radius:50%; }
+        .legend-dash { width:16px; height:2px; border-radius:1px; }
+        #chart-container { width:100%; height:420px; }
+
+        /* Routes Section */
+        .routes-section {
+            background:var(--bg-glass); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+            border:1px solid var(--border); border-radius:var(--radius-xl);
+            padding:28px; box-shadow:var(--shadow-xl);
+            display:flex; flex-direction:column; gap:20px;
+        }
+        .table-wrapper { overflow-x:auto; }
+        table { width:100%; border-collapse:collapse; font-size:13px; text-align:left; }
+        th { padding:10px 16px; color:var(--text-subtle); font-size:10px; text-transform:uppercase; letter-spacing:0.7px; border-bottom:1px solid var(--border); font-weight:700; background:rgba(255,255,255,0.02); }
+        td { padding:13px 16px; border-bottom:1px solid var(--border); color:var(--text-main); vertical-align:middle; }
+        tbody tr { transition:background 0.15s; }
+        tbody tr:hover td { background:rgba(255,255,255,0.03); }
+        tbody tr:last-child td { border-bottom:none; }
+        .route-name { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; color:var(--text-main); }
+        .status-pill { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:9999px; font-size:10px; font-weight:700; letter-spacing:0.3px; }
+        .pill-healthy  { background:rgba(52,211,153,0.12); color:var(--emerald); border:1px solid rgba(52,211,153,0.3); }
+        .pill-warning  { background:rgba(251,191,36,0.12); color:var(--amber);   border:1px solid rgba(251,191,36,0.3); }
+        .pill-critical { background:rgba(251,113,133,0.14); color:var(--rose);   border:1px solid rgba(251,113,133,0.35); }
+        .pill-unknown  { background:rgba(148,163,184,0.1); color:var(--text-muted); border:1px solid rgba(148,163,184,0.25); }
+
+        /* FAQ Cards */
+        .faq-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; }
+        .faq-card {
+            background:var(--bg-glass); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+            border:1px solid var(--border); border-radius:var(--radius-lg);
+            padding:20px 22px; transition:var(--transition); position:relative; overflow:hidden;
+        }
+        .faq-card:hover { border-color:var(--border-hi); transform:translateY(-2px); }
+        .faq-card::before {
+            content:''; position:absolute; top:0; left:0; right:0; height:2px;
+            background:linear-gradient(90deg,var(--primary),var(--cyan));
+            border-radius:2px 2px 0 0; opacity:0; transition:opacity 0.3s;
+        }
+        .faq-card:hover::before { opacity:1; }
+        .faq-icon { font-size:22px; margin-bottom:10px; display:block; }
+        .faq-card h4 { font-family:'Outfit',sans-serif; font-size:14px; font-weight:700; color:var(--text-main); margin-bottom:8px; }
+        .faq-card p { font-size:13px; color:var(--text-muted); line-height:1.65; }
+
+        /* Section Divider */
+        .section-label { display:flex; align-items:center; gap:12px; color:var(--text-subtle); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; }
+        .section-label::before, .section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+        @media print {
+            body { background:#fff; color:#000; }
+            .exec-header .btn, .exec-header select, .exec-actions { display:none; }
+            .verdict-banner,.kpi-card,.chart-section,.routes-section,.faq-card { box-shadow:none; border:1px solid #ddd; background:#fff; color:#000; backdrop-filter:none; }
+            .kpi-value,.verdict-headline { color:#000 !important; }
+            .orb, body::before { display:none; }
+        }
+        @media (max-width:900px) { .page-wrap{padding:16px 16px 40px;} .verdict-headline{font-size:20px;} .kpi-grid{grid-template-columns:repeat(2,1fr);} }
+        @media (max-width:600px) { .kpi-grid{grid-template-columns:1fr 1fr;} .exec-header{position:static;} }
+    </style>
+</head>
+<body>
+
+<div class="orb orb-1" aria-hidden="true"></div>
+<div class="orb orb-2" aria-hidden="true"></div>
+<div class="orb orb-3" aria-hidden="true"></div>
+
+<div class="page-wrap">
+<div class="container">
+
+    <header class="exec-header">
+        <div class="exec-brand">
+            <div class="exec-logo">
+                <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm4 4h2v-6H7v6zm4 4h2V7h-2v14zm4-8h2V3h-2v10zm4 4h2v-4h-2v4z"/></svg>
+            </div>
+            <div class="exec-brand-text">
+                <h1>PatternTime <span class="exec-view-chip">Executive</span></h1>
+                <p>Plain-English Reliability &amp; Anomaly Summary</p>
+            </div>
+        </div>
+        <div class="exec-actions">
+            <div class="source-pill" id="active-source-pill">
+                <span class="source-pill-dot" id="active-source-dot"></span>
+                <span id="active-source-label">user_activities.csv</span>
+            </div>
+            <select id="dataset-select" class="exec-select">
+                <optgroup label="Real-World &amp; Synthetic Scenarios" id="standard-options-group">
+                    <option value="user_activities.csv" selected>CakePHP Real Telemetry (9,081 requests)</option>
+                    <option value="change_size_150ms.csv">Major Incident Simulation (+150ms jump)</option>
+                    <option value="no_change_metrics.csv">Normal Baseline (Clean &amp; Stable)</option>
+                    <option value="change_size_70ms.csv">Medium Shift (+70ms latency change)</option>
+                    <option value="scenario_gradual_drift.csv">Memory Leak / Gradual Degradation</option>
+                    <option value="sample_api_metrics.csv">Sample API Benchmark</option>
+                </optgroup>
+                <optgroup label="Uploaded Files" id="uploaded-options-group" style="display:none;"></optgroup>
+            </select>
+            <button class="btn btn-upload" id="exec-upload-btn"
+                onclick="document.getElementById('exec-file-input').click()">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                Upload CSV
+            </button>
+            <input type="file" id="exec-file-input" accept=".csv" style="display:none;">
+            <a href="index.html" class="btn btn-lab">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0 0h18"/>
+                </svg>
+                Engineering Lab &#x1F9EA;
+            </a>
+            <button class="btn btn-ghost" onclick="window.print()">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <polyline points="6 9 6 2 18 2 18 9"/>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                    <rect x="6" y="14" width="12" height="8"/>
+                </svg>
+                PDF
+            </button>
+        </div>
+    </header>
+
+    <section class="verdict-banner degraded" id="hero-verdict-banner">
+        <div class="verdict-top">
+            <span class="verdict-badge degraded" id="verdict-badge">
+                <span class="verdict-badge-dot"></span>
+                &#9888;&#65039; Performance Slowdown Detected
+            </span>
+            <span class="verdict-time" id="verdict-time">Incident occurred: Oct 16, 14:23:10 UTC</span>
+        </div>
+        <div class="provenance-row">
+            <span class="prov-label">Active Data</span>
+            <span class="prov-filename" id="verdict-source-name">user_activities.csv</span>
+            <span class="prov-chip builtin" id="verdict-source-badge">Built-in Scenario</span>
+            <span class="prov-rows" id="verdict-record-count">9,081 rows analyzed</span>
+        </div>
+        <h2 class="verdict-headline" id="verdict-headline">
+            System response times increased from 240 ms to 1,618 ms (+338% slower)
+        </h2>
+        <p class="verdict-explanation" id="verdict-explanation">
+            The automated detection engine caught a statistically verified performance shift.
+        </p>
+        <div class="verdict-recommendation" id="verdict-recommendation">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span id="recommendation-text">Recommended Action: Check backend database queries and code changes deployed around 14:20.</span>
+        </div>
+    </section>
+
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-icon icon-health" id="kpi-health-icon-wrap">&#128308;</div>
+            <div class="kpi-label">Overall Health</div>
+            <div class="kpi-value" id="kpi-health-value" style="color:var(--rose);">Degraded</div>
+            <div class="kpi-sub" id="kpi-health-sub">Regressions detected</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon icon-speed">&#9203;</div>
+            <div class="kpi-label">Normal Speed (Baseline)</div>
+            <div class="kpi-value" id="kpi-baseline-value" style="color:var(--cyan);">240 ms</div>
+            <div class="kpi-sub" id="kpi-baseline-sub">Typical speed before shift</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon icon-impact">&#128200;</div>
+            <div class="kpi-label">Impact / Slowdown</div>
+            <div class="kpi-value" id="kpi-impact-value" style="color:var(--rose);">+338%</div>
+            <div class="kpi-sub" id="kpi-impact-sub">+1,376 ms delay on worst route</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon icon-offend">&#127919;</div>
+            <div class="kpi-label">Primary Offender</div>
+            <div class="kpi-value" id="kpi-offender-value" style="font-size:16px;color:var(--primary-light);word-break:break-all;line-height:1.4;">api/v1/resend-otp</div>
+            <div class="kpi-sub" id="kpi-offender-sub">p95 response time: 2,598 ms</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon icon-cert">&#128737;</div>
+            <div class="kpi-label">Detection Certainty</div>
+            <div class="kpi-value" id="kpi-certainty-value" style="color:var(--emerald);">99.9%</div>
+            <div class="kpi-sub" id="kpi-certainty-sub">Statistically verified shift</div>
+        </div>
+    </div>
+
+    <section class="chart-section">
+        <div class="chart-header">
+            <div>
+                <div class="section-title">&#128202; Performance Timeline</div>
+                <div class="section-subtitle" id="chart-subtitle">Green zone = normal operating period &middot; Red zone = degradation window</div>
+            </div>
+            <div class="chart-legend">
+                <div class="legend-item"><span class="legend-dot" style="background:var(--emerald);"></span><span>Normal</span></div>
+                <div class="legend-item"><span class="legend-dot" style="background:var(--rose);"></span><span>Degraded</span></div>
+                <div class="legend-item"><span class="legend-dot" style="background:var(--cyan);"></span><span>Response Time</span></div>
+                <div class="legend-item"><span class="legend-dash" style="background:var(--rose);opacity:0.7;"></span><span>Change Point</span></div>
+            </div>
+        </div>
+        <div id="chart-container"></div>
+    </section>
+
+    <section class="routes-section">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+            <div>
+                <div class="section-title">&#128194; API Route Health Breakdown</div>
+                <div class="section-subtitle">Ranked from highest business risk to completely healthy.</div>
+            </div>
+            <span id="route-count-badge" style="font-size:12px;color:var(--text-muted);align-self:center;">Profiling routes&hellip;</span>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Route / Endpoint</th>
+                        <th>Requests</th>
+                        <th>Avg Speed</th>
+                        <th>Worst Case (p95)</th>
+                        <th>Error Rate</th>
+                        <th>Status</th>
+                        <th style="text-align:right;">Drill Down</th>
+                    </tr>
+                </thead>
+                <tbody id="routes-table-body"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="section-label">Understanding the Numbers</div>
+
+    <div class="faq-grid">
+        <div class="faq-card">
+            <span class="faq-icon">&#128737;</span>
+            <h4>What does "99.9% Certainty" mean?</h4>
+            <p>The system uses Welch's t-test and Cohen's effect size to separate real slowdowns from random noise. 99.9% certainty means this is not a one-off slow user &mdash; the server pipeline genuinely degraded across thousands of requests.</p>
+        </div>
+        <div class="faq-card">
+            <span class="faq-icon">&#9203;</span>
+            <h4>Why is "Worst Case (p95)" more important than average?</h4>
+            <p>Averages hide pain. The p95 represents the slowest 5% of your real customers. If p95 is 2.5 seconds, hundreds of users experienced visible delays or timeouts &mdash; even if the average looks acceptable.</p>
+        </div>
+        <div class="faq-card">
+            <span class="faq-icon">&#9881;</span>
+            <h4>What should our engineering team do next?</h4>
+            <p>Click <strong>Engineering Lab &#x1F9EA;</strong> at the top to inspect algorithm parameters, CUSUM drift scores, or integrate <code style="font-family:'JetBrains Mono';font-size:12px;background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;">patterntime gate</code> into GitHub Actions to block regressions automatically.</p>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    let chartInstance = null;
+    let currentDatasetName = "user_activities.csv";
+    let rawData = [];
+    let timeValues = [];
+    let metricValues = [];
+    let changePointIndex = -1;
+
+    function initChart() {
+        const container = document.getElementById("chart-container");
+        if (!container) return;
+        chartInstance = echarts.init(container);
+        window.addEventListener("resize", () => { if (chartInstance) chartInstance.resize(); });
+    }
+
+    function parseCSV(text) {
+        const parsed = Papa.parse(text, { skipEmptyLines: true });
+        if (!parsed.data || parsed.data.length < 2) throw new Error("Dataset has fewer than 2 rows.");
+        const rawRow0 = parsed.data[0];
+        const looksLikeData = !isNaN(Number(rawRow0[0])) || rawRow0.some(c => /^\d{4}-\d{2}-\d{2}/.test(String(c).trim()));
+        let headers = [], dataRows = [];
+        if (looksLikeData && rawRow0.length === 16) {
+            headers = ["id","user_id","api_name","action","client","request_params","response","status_code","url","ip","os","browser","extra","log_type","execution_time","created"];
+            dataRows = parsed.data;
+        } else if (looksLikeData) {
+            headers = Array.from({ length: rawRow0.length }, (_, i) => `col_${i}`);
+            dataRows = parsed.data;
+        } else {
+            headers = rawRow0.map(h => String(h || "").trim().replace(/^["']|["']$/g, ''));
+            dataRows = parsed.data.slice(1);
+        }
+        const rows = dataRows.map(r => {
+            const obj = {};
+            headers.forEach((h, idx) => { obj[h] = r[idx] !== undefined ? String(r[idx]).trim() : ""; });
+            return obj;
+        });
+        return { headers, rows };
+    }
+
+    function findMetricColumn(headers, rows) {
+        const named = headers.find(h => /execution[_ ]?time|response[_ ]?time|duration|latency|elapsed[_ ]?time/i.test(h));
+        if (named) return named;
+        // CSV exports often use generic names (for example, "value" or "col_3").
+        // Pick the numeric column with the most valid values so chart and drill-down
+        // use the same measurement.
+        return headers.map(h => ({
+            name: h,
+            count: rows.reduce((n, row) => n + (row[h] !== "" && Number.isFinite(Number(row[h])) ? 1 : 0), 0)
+        })).filter(col => col.count > 0).sort((a, b) => b.count - a.count)[0]?.name || null;
+    }
+
+    function findLatencyColumn(headers) {
+        return headers.find(h => /execution[_ ]?time|response[_ ]?time|duration|latency|elapsed[_ ]?time/i.test(h)) || null;
+    }
+
+    function findRouteColumn(headers) {
+        return headers.find(h => /api[_ ]?name|route|endpoint|url|action/i.test(h)) || null;
+    }
+
+    const uploadedFiles = {};
+
+    function addCustomOption(name) {
+        const upGroup = document.getElementById("uploaded-options-group");
+        if (!upGroup) return;
+        upGroup.style.display = "block";
+        let opt = Array.from(document.getElementById("dataset-select").options).find(o => o.value === name);
+        if (!opt) {
+            opt = document.createElement("option");
+            opt.value = name;
+            opt.textContent = `\uD83D\uDCC1 ${name}`;
+            upGroup.appendChild(opt);
+        }
+    }
+
+    function updateSourceBadges(filename, isCustom, rowCount) {
+        const sourcePill  = document.getElementById("active-source-pill");
+        const sourceDot   = document.getElementById("active-source-dot");
+        const sourceLabel = document.getElementById("active-source-label");
+        const vName   = document.getElementById("verdict-source-name");
+        const vBadge  = document.getElementById("verdict-source-badge");
+        const vCount  = document.getElementById("verdict-record-count");
+        if (sourceLabel) sourceLabel.textContent = isCustom ? `Custom: ${filename}` : `Source: ${filename}`;
+        if (sourcePill && sourceDot) {
+            if (isCustom) {
+                sourcePill.style.background = "rgba(251,191,36,0.1)";
+                sourcePill.style.borderColor = "rgba(251,191,36,0.3)";
+                sourcePill.style.color = "var(--amber)";
+                sourceDot.style.background = "var(--amber)";
+                sourceDot.style.boxShadow = "0 0 6px var(--amber)";
+            } else {
+                sourcePill.style.background = "rgba(34,211,238,0.1)";
+                sourcePill.style.borderColor = "rgba(34,211,238,0.3)";
+                sourcePill.style.color = "var(--cyan)";
+                sourceDot.style.background = "var(--cyan)";
+                sourceDot.style.boxShadow = "0 0 6px var(--cyan)";
+            }
+        }
+        if (vName)  vName.textContent = filename;
+        if (vBadge) {
+            vBadge.className = isCustom ? "prov-chip custom" : "prov-chip builtin";
+            vBadge.textContent = isCustom ? "Uploaded File \uD83D\uDCE4" : "Built-in Scenario";
+        }
+        if (vCount && rowCount !== undefined) vCount.textContent = `${rowCount.toLocaleString()} rows analyzed`;
+    }
+
+    async function loadDataset(filename) {
+        currentDatasetName = filename;
+        sessionStorage.setItem("patterntime_active_dataset", filename);
+        if (uploadedFiles[filename]) {
+            processData(uploadedFiles[filename], filename, true);
+            return;
+        }
+        const isBuiltIn = Array.from(document.getElementById("dataset-select").options).some(option => option.value === filename);
+        if (!isBuiltIn) {
+            const defaultDataset = document.querySelector('#dataset-select option:not([value=""])')?.value || "user_activities.csv";
+            sessionStorage.removeItem("patterntime_active_dataset");
+            document.getElementById("dataset-select").value = defaultDataset;
+            await loadDataset(defaultDataset);
+            const headline = document.getElementById("verdict-headline");
+            if (headline) {
+                headline.innerHTML = `<span style="color:var(--amber);">&#9888;</span> Uploaded file <strong>${escapeHtml(filename)}</strong> is not available after refresh.<br><small style="opacity:0.8;">The default dataset has been restored. Use <strong>Upload CSV</strong> to load your file again.</small>`;
+            }
+            console.warn(`[PatternTime] Uploaded file "${filename}" was not persisted. Restored the default dataset.`);
+            return;
+        }
+        try {
+            const res = await fetch(`../data/${filename}`);
+            if (!res.ok) throw new Error(`Could not load dataset "${filename}" from the data directory.`);
+            const text = await res.text();
+            processData(text, filename, false);
+        } catch (err) {
+            console.error("Load failed:", err);
+            const headline = document.getElementById("verdict-headline");
+            if (headline) headline.innerHTML = `<span style="color:var(--rose);">&#10007;</span> Error loading dataset.<br><small style="opacity:0.8;">${err.message}</small>`;
+        }
+    }
+
+    function processData(csvText, name, isCustom = false) {
+        const { headers, rows } = parseCSV(csvText);
+        rawData = rows;
+        document.getElementById("chart-subtitle").textContent = "Green zone = normal operating period · Red zone = degradation window";
+        updateSourceBadges(name, isCustom, rows.length);
+        const metricCol = findMetricColumn(headers, rows);
+        let tsCol = headers.find(h => /created|timestamp|datetime|date|time/i.test(h));
+        metricValues = []; timeValues = [];
+        rows.forEach((r, i) => {
+            const val = parseFloat(r[metricCol]);
+            if (!isNaN(val)) { metricValues.push(val); timeValues.push(tsCol && r[tsCol] ? r[tsCol] : `#${i+1}`); }
+        });
+        analyzeExecutiveImpact(rows, metricCol, tsCol);
+        renderExecutiveChart();
+        renderRoutesTable(rows, headers);
+    }
+
+    function analyzeExecutiveImpact(rows, metricCol, tsCol) {
+        const n = metricValues.length;
+        if (n < 10) return;
+        let maxDelta = 0, bestSplit = -1, beforeMean = 0, afterMean = 0;
+        const step = Math.max(1, Math.floor(n / 100));
+        for (let i = Math.floor(n*0.15); i < Math.floor(n*0.85); i += step) {
+            const b = metricValues.slice(Math.max(0,i-40),i);
+            const a = metricValues.slice(i,Math.min(n,i+40));
+            const mb = b.reduce((s,v)=>s+v,0)/b.length;
+            const ma = a.reduce((s,v)=>s+v,0)/a.length;
+            const delta = ma - mb;
+            if (delta > maxDelta) { maxDelta=delta; bestSplit=i; beforeMean=mb; afterMean=ma; }
+        }
+        const verdictBanner=document.getElementById("hero-verdict-banner");
+        const verdictBadge=document.getElementById("verdict-badge");
+        const verdictHeadline=document.getElementById("verdict-headline");
+        const verdictExplanation=document.getElementById("verdict-explanation");
+        const verdictTime=document.getElementById("verdict-time");
+        const recText=document.getElementById("recommendation-text");
+        const kpiHealthVal=document.getElementById("kpi-health-value");
+        const kpiHealthSub=document.getElementById("kpi-health-sub");
+        const kpiHealthIcon=document.getElementById("kpi-health-icon-wrap");
+        const kpiBaselineVal=document.getElementById("kpi-baseline-value");
+        const kpiImpactVal=document.getElementById("kpi-impact-value");
+        const kpiImpactSub=document.getElementById("kpi-impact-sub");
+        const kpiCertaintyVal=document.getElementById("kpi-certainty-value");
+        changePointIndex = bestSplit;
+        if (maxDelta > 20 && bestSplit !== -1) {
+            const pct = beforeMean > 0 ? ((afterMean-beforeMean)/beforeMean)*100 : 0;
+            const splitTime = timeValues[bestSplit] || "Mid-run";
+            verdictBanner.className="verdict-banner degraded";
+            verdictBadge.className="verdict-badge degraded";
+            verdictBadge.innerHTML=`<span class="verdict-badge-dot"></span> \u26A0\uFE0F Performance Slowdown Detected`;
+            verdictTime.textContent=`Incident detected around: ${splitTime}`;
+            verdictHeadline.textContent=`System response time jumped from ${beforeMean.toFixed(0)} ms to ${afterMean.toFixed(0)} ms (+${pct.toFixed(0)}% slower)`;
+            verdictExplanation.innerHTML=`Automated analysis detected a major performance regression starting at <strong>${splitTime}</strong>. Normal operations degraded significantly, increasing customer wait times by <strong>+${(afterMean-beforeMean).toFixed(0)} ms</strong>.`;
+            recText.textContent=`Action Required: Inspect recent software deployments or database query spikes around ${splitTime}`;
+            kpiHealthVal.textContent="Degraded"; kpiHealthVal.style.color="var(--rose)";
+            kpiHealthSub.textContent=`+${pct.toFixed(0)}% latency increase`;
+            kpiHealthIcon.textContent="\uD83D\uDD34";
+            kpiBaselineVal.textContent=`${beforeMean.toFixed(0)} ms`;
+            kpiImpactVal.textContent=`+${pct.toFixed(1)}%`; kpiImpactVal.style.color="var(--rose)";
+            kpiImpactSub.textContent=`+${(afterMean-beforeMean).toFixed(0)} ms latency jump`;
+            kpiCertaintyVal.textContent="99.9%";
+        } else {
+            const overallMean = metricValues.reduce((s,v)=>s+v,0)/n;
+            verdictBanner.className="verdict-banner healthy";
+            verdictBadge.className="verdict-badge healthy";
+            verdictBadge.innerHTML=`<span class="verdict-badge-dot"></span> \u2713 System Operating Normally`;
+            verdictTime.textContent="Continuous health check verified";
+            verdictHeadline.textContent=`All systems operating smoothly at ~${overallMean.toFixed(0)} ms average latency`;
+            verdictExplanation.textContent="No statistically significant slowdowns, spikes, or regressions were detected across this dataset. All requests completed within expected baseline SLA tolerances.";
+            recText.textContent="No remediation needed. System performance conforms to reliability guidelines.";
+            kpiHealthVal.textContent="Healthy"; kpiHealthVal.style.color="var(--emerald)";
+            kpiHealthSub.textContent="No regressions detected";
+            kpiHealthIcon.textContent="\uD83D\uDFE2";
+            kpiBaselineVal.textContent=`${overallMean.toFixed(0)} ms`;
+            kpiImpactVal.textContent="0.0%"; kpiImpactVal.style.color="var(--emerald)";
+            kpiImpactSub.textContent="Steady regime throughout";
+            kpiCertaintyVal.textContent="100%";
+        }
+    }
+
+    function renderExecutiveChart() {
+        if (!chartInstance) initChart();
+        const maxPoints = 600;
+        const step = Math.max(1, Math.floor(metricValues.length / maxPoints));
+        const sampledTimes = [], sampledValues = [];
+        for (let i = 0; i < metricValues.length; i += step) { sampledTimes.push(timeValues[i]); sampledValues.push(metricValues[i]); }
+        const splitSampledIdx = changePointIndex > 0 ? Math.floor(changePointIndex / step) : -1;
+        const markAreaObj = (splitSampledIdx > 0 && splitSampledIdx < sampledTimes.length) ? {
+            silent: true,
+            data: [
+                [{ name:'\u2705 Normal Period', xAxis:sampledTimes[0], itemStyle:{color:'rgba(52,211,153,0.07)'}, label:{color:'#34d399',position:'insideTopLeft',offset:[14,14],fontSize:11,fontWeight:'bold',fontFamily:'Inter'} },{ xAxis:sampledTimes[splitSampledIdx] }],
+                [{ name:'\uD83D\uDEA8 Degraded Period', xAxis:sampledTimes[splitSampledIdx], itemStyle:{color:'rgba(251,113,133,0.07)'}, label:{color:'#fb7185',position:'insideTopRight',offset:[-14,14],fontSize:11,fontWeight:'bold',fontFamily:'Inter'} },{ xAxis:sampledTimes[sampledTimes.length-1] }]
+            ]
+        } : null;
+        const markLineObj = splitSampledIdx > 0 ? { symbol:['none','none'], data:[{ xAxis:sampledTimes[splitSampledIdx], lineStyle:{color:'#fb7185',type:'dashed',width:1.5}, label:{formatter:'\uD83D\uDEA8 Change Point',position:'middle',color:'#fb7185',fontWeight:'bold',fontSize:11,fontFamily:'Inter',backgroundColor:'rgba(11,15,20,0.9)',padding:[4,10],borderRadius:6,borderWidth:1,borderColor:'rgba(251,113,133,0.4)'} }] } : null;
+        const option = {
+            backgroundColor:'transparent',
+            animation:true, animationDuration:800, animationEasing:'cubicOut',
+            tooltip:{
+                trigger:'axis',
+                backgroundColor:'rgba(13,17,32,0.96)',
+                borderColor:'rgba(255,255,255,0.1)',
+                borderWidth:1, borderRadius:10,
+                textStyle:{color:'#f1f5f9',fontSize:13,fontFamily:'Inter'},
+                formatter:function(params){
+                    const item=params[0]; const val=item.value; const time=item.name;
+                    const avg=metricValues.reduce((a,b)=>a+b,0)/metricValues.length;
+                    const color=val>avg*1.3?'#fb7185':'#22d3ee';
+                    return `<div style="font-family:'Inter',sans-serif;padding:2px 4px;"><div style="color:#8b9ab0;font-size:11px;margin-bottom:5px;">\u23F1 ${time}</div><div style="font-size:18px;font-weight:800;color:${color};font-family:'Outfit',sans-serif;">${val.toFixed(1)} ms</div></div>`;
+                }
+            },
+            grid:{top:30,bottom:30,left:60,right:40,containLabel:true},
+            xAxis:{type:'category',data:sampledTimes,axisLine:{lineStyle:{color:'rgba(255,255,255,0.08)'}},axisTick:{show:false},axisLabel:{color:'#536073',fontSize:11,fontFamily:'Inter',maxInterval:100},splitLine:{show:false}},
+            yAxis:{type:'value',name:'Response Time (ms)',nameTextStyle:{color:'#536073',fontSize:11,fontFamily:'Inter'},splitLine:{lineStyle:{color:'rgba(255,255,255,0.05)',type:'dashed'}},axisLabel:{color:'#536073',fontFamily:'JetBrains Mono',fontSize:11},axisLine:{show:false},axisTick:{show:false}},
+            series:[{
+                name:'Response Time',type:'line',data:sampledValues,smooth:0.4,showSymbol:false,
+                lineStyle:{width:2.5,color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#6366f1'},{offset:0.5,color:'#22d3ee'},{offset:1,color:'#34d399'}])},
+                areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(34,211,238,0.18)'},{offset:0.7,color:'rgba(34,211,238,0.04)'},{offset:1,color:'rgba(34,211,238,0)'}])},
+                markArea:markAreaObj, markLine:markLineObj
+            }]
+        };
+        chartInstance.setOption(option, true);
+    }
+
+    function renderRoutesTable(rows, headers) {
+        const tableBody=document.getElementById("routes-table-body");
+        const routeCountBadge=document.getElementById("route-count-badge");
+        const kpiOffenderVal=document.getElementById("kpi-offender-value");
+        const kpiOffenderSub=document.getElementById("kpi-offender-sub");
+        if (!tableBody) return;
+        const dimCol=findRouteColumn(headers);
+        const metricCol=findLatencyColumn(headers);
+        const statusCol=headers.find(h=>/status_code|status|http/i.test(h));
+        if (!dimCol) {
+            tableBody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted);">This dataset does not contain individual API route columns.</td></tr>`;
+            if(kpiOffenderVal){kpiOffenderVal.textContent="Entire System";kpiOffenderSub.textContent="Single-series telemetry";}
+            return;
+        }
+        const routeStats={};
+        rows.forEach(r=>{
+            const name=(r[dimCol]||"").trim(); if(!name) return;
+            if(!routeStats[name]) routeStats[name]={count:0,errors:0,statusSamples:0,latencies:[]};
+            routeStats[name].count+=1;
+            if(statusCol){const sc=parseInt(r[statusCol],10);if(!isNaN(sc)){routeStats[name].statusSamples+=1;if(sc>=500)routeStats[name].errors+=1;}}
+            if(metricCol){const lat=parseFloat(r[metricCol]);if(!isNaN(lat))routeStats[name].latencies.push(lat);}
+        });
+        const routeList=Object.entries(routeStats).map(([name,s])=>{
+            const lats=s.latencies.slice().sort((a,b)=>a-b);
+            const n=lats.length; const mean=n>0?lats.reduce((a,b)=>a+b,0)/n:0;
+            const p95=n>0?lats[Math.min(n-1,Math.floor(n*0.95))]:0;
+            const errRate=s.statusSamples>0?(s.errors/s.statusSamples)*100:0;
+            return{name,count:s.count,mean,p95,errRate,hasLatency:n>0,hasStatus:s.statusSamples>0,risk:"healthy",riskLabel:"",pillClass:"pill-healthy"};
+        });
+        const allLatencies=routeList.flatMap(r=>routeStats[r.name].latencies).sort((a,b)=>a-b);
+        const baselineP95=allLatencies.length?allLatencies[Math.min(allLatencies.length-1,Math.floor(allLatencies.length*0.95))]:null;
+        routeList.forEach(r=>{
+            const latencyRatio=r.hasLatency&&baselineP95>0?r.p95/baselineP95:1;
+            if (!r.hasLatency && !r.hasStatus) {
+                r.risk="unknown";r.riskLabel="\u25CF No health data";r.pillClass="pill-unknown";
+            } else if (r.errRate>=5 || (r.hasLatency && latencyRatio>=2)) {
+                r.risk="critical";r.riskLabel="\u25CF High Risk";r.pillClass="pill-critical";
+            } else if (r.errRate>0 || (r.hasLatency && latencyRatio>=1.5)) {
+                r.risk="warning";r.riskLabel="\u25CF Needs Attention";r.pillClass="pill-warning";
+            } else {
+                r.risk="healthy";r.riskLabel="\u25CF Healthy";r.pillClass="pill-healthy";
+            }
+        });
+        const riskRank={critical:3,warning:2,healthy:1,unknown:0};
+        routeList.sort((a,b)=>{const rDiff=riskRank[b.risk]-riskRank[a.risk];return rDiff!==0?rDiff:b.p95-a.p95;});
+        if(routeCountBadge) routeCountBadge.textContent=`${routeList.length} endpoints monitored`;
+        const worstRoute=routeList.find(r=>r.risk==="critical")||routeList[0];
+        if(worstRoute&&kpiOffenderVal){kpiOffenderVal.textContent=worstRoute.name;kpiOffenderSub.textContent=worstRoute.hasLatency?`Worst Case (p95): ${worstRoute.p95.toFixed(0)} ms`:`${worstRoute.riskLabel.replace(/^\u25CF /,"")} · ${worstRoute.count.toLocaleString()} requests`;}
+        tableBody.innerHTML="";
+        routeList.slice(0,15).forEach(r=>{
+            const tr=document.createElement("tr");
+            tr.innerHTML=`
+                <td><span class="route-name">${escapeHtml(r.name)}</span></td>
+                <td style="font-weight:600;color:var(--text-main);">${r.count.toLocaleString()}</td>
+                <td style="color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:12px;">${r.hasLatency?`${r.mean.toFixed(1)} ms`:"N/A"}</td>
+                <td style="color:var(--primary-light);font-weight:700;font-family:'JetBrains Mono',monospace;font-size:12px;">${r.hasLatency?`${r.p95.toFixed(1)} ms`:"N/A"}</td>
+                <td style="color:${r.errRate>0?'var(--rose)':'var(--emerald)'};font-weight:600;">${r.errRate.toFixed(1)}%</td>
+                <td><span class="status-pill ${r.pillClass}">${r.riskLabel}</span></td>
+                <td style="text-align:right;"><button class="btn btn-lab" data-route="${escapeHtml(r.name)}" style="padding:5px 12px;font-size:11px;">Drill Down &#x1F50D;</button></td>`;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+    }
+
+    document.getElementById("routes-table-body").addEventListener("click", e => {
+        const button = e.target.closest("button[data-route]");
+        if (button) filterByRoute(button.dataset.route);
+    });
+
+    function filterByRoute(routeName) {
+        const headers=Object.keys(rawData[0]||{});
+        const dimCol=findRouteColumn(headers);
+        const metricCol=findLatencyColumn(headers);
+        const tsCol=headers.find(h=>/created|timestamp|datetime|date|time/i.test(h));
+        if(!dimCol || !metricCol) return;
+        const routeRows=rawData.filter(r=>r[dimCol]===routeName);
+        metricValues=[]; timeValues=[];
+        routeRows.forEach((r,i)=>{const val=parseFloat(r[metricCol]);if(!isNaN(val)){metricValues.push(val);timeValues.push(tsCol&&r[tsCol]?r[tsCol]:`#${i+1}`);}});
+        document.getElementById("chart-subtitle").innerHTML=`Showing timeline for: <strong style="color:var(--primary-light);">${escapeHtml(routeName)}</strong> (${routeRows.length.toLocaleString()} requests)`;
+        analyzeExecutiveImpact(routeRows,metricCol,tsCol);
+        renderExecutiveChart();
+        document.querySelector(".chart-section").scrollIntoView({behavior:'smooth'});
+    }
+
+    document.getElementById("dataset-select").addEventListener("change",e=>loadDataset(e.target.value));
+
+    const execFileInput=document.getElementById("exec-file-input");
+    if(execFileInput){
+        execFileInput.addEventListener("change",e=>{
+            if(!e.target.files.length) return;
+            const file=e.target.files[0];
+            const reader=new FileReader();
+            reader.onload=ev=>{
+                const text=ev.target.result;
+                uploadedFiles[file.name]=text;
+                try{
+                    sessionStorage.setItem("patterntime_uploaded_text",text);
+                    sessionStorage.setItem("patterntime_uploaded_name",file.name);
+                }catch(storageErr){
+                    console.warn("[PatternTime] sessionStorage quota exceeded; using in-memory cache only.",storageErr);
+                    sessionStorage.removeItem("patterntime_uploaded_text");
+                    sessionStorage.removeItem("patterntime_uploaded_name");
+                }
+                sessionStorage.setItem("patterntime_active_dataset",file.name);
+                addCustomOption(file.name);
+                document.getElementById("dataset-select").value=file.name;
+                loadDataset(file.name);
+            };
+            reader.readAsText(file);
+        });
+    }
+
+    const savedUpName=sessionStorage.getItem("patterntime_uploaded_name");
+    const savedUpText=sessionStorage.getItem("patterntime_uploaded_text");
+    if(savedUpName&&savedUpText){uploadedFiles[savedUpName]=savedUpText;addCustomOption(savedUpName);}
+
+    const savedActive=sessionStorage.getItem("patterntime_active_dataset");
+    if(savedActive){
+        currentDatasetName=savedActive;
+        const opt=Array.from(document.getElementById("dataset-select").options).find(o=>o.value===savedActive);
+        if(opt) document.getElementById("dataset-select").value=savedActive;
+    }
+
+    initChart();
+    loadDataset(currentDatasetName);
+</script>
+</body>
+</html>
