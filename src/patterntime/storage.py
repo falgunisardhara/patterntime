@@ -359,7 +359,7 @@ class DatabaseStorage:
             return
 
         # Case 2: Direct MetricImpact or dictionary
-        change_idx = getattr(impact, "change_index", 0)
+        change_idx = impact.get("change_index", 0) if isinstance(impact, dict) else getattr(impact, "change_index", 0)
         self._create_impact_row(session, run_id, change_idx, impact)
 
     def _create_impact_row(
@@ -369,25 +369,38 @@ class DatabaseStorage:
         change_index: int,
         metric_impact: Any,
     ) -> None:
-        """Helper to create an ImpactReportModel record."""
-        b_stats = getattr(metric_impact, "before_stats", None)
-        a_stats = getattr(metric_impact, "after_stats", None)
+        """Helper to create an ImpactReportModel record from either MetricImpact object or dict."""
+        def _get(key: str, default: Any = None) -> Any:
+            if isinstance(metric_impact, dict):
+                return metric_impact.get(key, default)
+            return getattr(metric_impact, key, default)
+
+        b_stats = _get("before_stats") or _get("pre_stats")
+        a_stats = _get("after_stats") or _get("post_stats")
+
+        pre_m = _get("pre_mean")
+        if pre_m is None:
+            pre_m = getattr(b_stats, "mean", 0.0) if b_stats else 0.0
+
+        post_m = _get("post_mean")
+        if post_m is None:
+            post_m = getattr(a_stats, "mean", 0.0) if a_stats else 0.0
 
         report_model = ImpactReportModel(
             run_id=run_id,
             change_index=change_index,
-            severity=getattr(metric_impact, "severity", "low"),
-            cohen_d=float(getattr(metric_impact, "cohen_d", 0.0)),
-            effect_size_category=getattr(metric_impact, "effect_size_category", "negligible"),
-            p_value_welch=getattr(metric_impact, "p_value", None),
-            p_value_mann_whitney=getattr(metric_impact, "mann_whitney_p_value", None),
-            pre_mean=float(getattr(b_stats, "mean", 0.0)) if b_stats else 0.0,
-            post_mean=float(getattr(a_stats, "mean", 0.0)) if a_stats else 0.0,
-            absolute_change=float(getattr(metric_impact, "absolute_change", 0.0)),
-            percent_change=getattr(metric_impact, "percent_change", None),
-            pre_stats=json.dumps(b_stats.to_dict()) if hasattr(b_stats, "to_dict") else None,
-            post_stats=json.dumps(a_stats.to_dict()) if hasattr(a_stats, "to_dict") else None,
-            summary_sentence=getattr(metric_impact, "summary_sentence", None),
+            severity=_get("severity", "low"),
+            cohen_d=float(_get("cohen_d", 0.0)),
+            effect_size_category=_get("effect_size_category", "negligible"),
+            p_value_welch=_get("p_value") or _get("p_value_welch"),
+            p_value_mann_whitney=_get("mann_whitney_p_value") or _get("p_value_mann_whitney"),
+            pre_mean=float(pre_m),
+            post_mean=float(post_m),
+            absolute_change=float(_get("absolute_change", 0.0)),
+            percent_change=_get("percent_change"),
+            pre_stats=json.dumps(b_stats.to_dict()) if hasattr(b_stats, "to_dict") else (json.dumps(b_stats) if isinstance(b_stats, dict) else None),
+            post_stats=json.dumps(a_stats.to_dict()) if hasattr(a_stats, "to_dict") else (json.dumps(a_stats) if isinstance(a_stats, dict) else None),
+            summary_sentence=_get("summary_sentence"),
         )
         session.add(report_model)
 
@@ -400,7 +413,9 @@ class DatabaseStorage:
 
             result = run.to_dict()
             result["events"] = [e.to_dict() for e in run.events]
-            result["impact_reports"] = [r.to_dict() for r in run.impact_reports]
+            reports = [r.to_dict() for r in run.impact_reports]
+            result["impact_reports"] = reports
+            result["impact_report"] = reports[0] if reports else None
             return result
 
     def list_runs(

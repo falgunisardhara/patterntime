@@ -20,6 +20,7 @@
         if (typeof Papa === "undefined") {
             document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"><\/script>');
         }
+    </script>
     <script src="storage.js"></script>
     <style>
         :root {
@@ -1366,7 +1367,7 @@
 
     <!-- MySQL Historical Runs Modal -->
     <div class="modal-backdrop" id="history-modal">
-        <div class="modal-card" style="max-width: 1050px; height: 85vh;">
+        <div class="modal-card" style="max-width: 1180px; width: 92vw; height: 85vh;">
             <div class="modal-header">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); display: flex; align-items: center; justify-content: center; color: var(--primary-light);">
@@ -1418,14 +1419,14 @@
                     <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
                         <thead>
                             <tr style="text-align: left; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
-                                <th style="padding: 10px 14px;">Run ID</th>
-                                <th style="padding: 10px 14px;">Dataset</th>
-                                <th style="padding: 10px 14px;">Metric</th>
-                                <th style="padding: 10px 14px;">Algorithm</th>
-                                <th style="padding: 10px 14px;">Events</th>
-                                <th style="padding: 10px 14px;">Impact / Severity</th>
-                                <th style="padding: 10px 14px;">Saved At</th>
-                                <th style="padding: 10px 14px; text-align: right;">Actions</th>
+                                <th style="padding: 9px 10px;">Run ID</th>
+                                <th style="padding: 9px 10px;">Dataset</th>
+                                <th style="padding: 9px 10px;">Metric</th>
+                                <th style="padding: 9px 10px;">Algorithm</th>
+                                <th style="padding: 9px 10px;">Events</th>
+                                <th style="padding: 9px 10px;">Impact</th>
+                                <th style="padding: 9px 10px;">Saved At</th>
+                                <th style="padding: 9px 10px; text-align: right;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="history-table-body">
@@ -3311,31 +3312,31 @@
                 const algoDisplay = (run.algorithm_name || "unknown").toUpperCase();
 
                 tr.innerHTML = `
-                    <td style="padding: 10px 14px; font-weight: 600; color: var(--primary-light);">#${run.id}</td>
-                    <td style="padding: 10px 14px; color: var(--text-main); font-weight: 500;">
+                    <td style="padding: 8px 10px; font-weight: 600; color: var(--primary-light);">#${run.id}</td>
+                    <td style="padding: 8px 10px; color: var(--text-main); font-weight: 500; font-family: 'JetBrains Mono', monospace; font-size: 12px;">
                         ${run.dataset_name}
                     </td>
-                    <td style="padding: 10px 14px; color: var(--cyan); font-family: 'JetBrains Mono', monospace; font-size: 12px;">
+                    <td style="padding: 8px 10px; color: var(--cyan); font-family: 'JetBrains Mono', monospace; font-size: 12px;">
                         ${run.metric_name}
                     </td>
-                    <td style="padding: 10px 14px;">
+                    <td style="padding: 8px 10px;">
                         <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: var(--primary-light); font-size: 11px;">
                             ${algoDisplay}
                         </span>
                     </td>
-                    <td style="padding: 10px 14px; color: ${run.total_events > 0 ? 'var(--amber)' : 'var(--text-muted)'}; font-weight: 600;">
+                    <td style="padding: 8px 10px; color: ${run.total_events > 0 ? 'var(--amber)' : 'var(--text-muted)'}; font-weight: 600; font-size: 12px;">
                         ${run.total_events} ${run.total_events === 1 ? 'event' : 'events'}
                     </td>
-                    <td style="padding: 10px 14px;">
+                    <td style="padding: 8px 10px;">
                         <span class="badge ${run.total_events > 0 ? 'badge-danger' : 'badge-live'}" style="font-size: 11px;">
                             ${run.total_events > 0 ? 'Shift Detected' : 'Stable'}
                         </span>
                     </td>
-                    <td style="padding: 10px 14px; color: var(--text-muted); font-size: 12px;">${dateStr}</td>
-                    <td style="padding: 10px 14px; text-align: right;">
+                    <td style="padding: 8px 10px; color: var(--text-muted); font-size: 11px; white-space: nowrap;">${dateStr}</td>
+                    <td style="padding: 8px 10px; text-align: right; white-space: nowrap;">
                         <div style="display: inline-flex; gap: 6px;">
-                            <button class="btn btn-subtle" onclick="window.inspectHistoryRun(${run.id})" style="padding: 4px 8px; font-size: 12px;">Inspect</button>
-                            <button class="btn btn-subtle" onclick="window.deleteHistoryRun(${run.id})" style="padding: 4px 8px; font-size: 12px; color: var(--rose);" title="Delete run">🗑</button>
+                            <button class="btn btn-subtle" onclick="window.inspectHistoryRun(${run.id})" style="padding: 3px 8px; font-size: 11px;">Inspect</button>
+                            <button class="btn btn-subtle" onclick="window.deleteHistoryRun(${run.id})" style="padding: 3px 8px; font-size: 11px; color: var(--rose);" title="Delete run">🗑</button>
                         </div>
                     </td>
                 `;
