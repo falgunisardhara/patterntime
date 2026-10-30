@@ -20,8 +20,7 @@
         if (typeof Papa === "undefined") {
             document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"><\/script>');
         }
-    </script>
-
+    <script src="storage.js"></script>
     <style>
         :root {
             --bg-base: #090d16;
@@ -975,7 +974,7 @@
             </div>
 
             <div class="header-actions">
-                <a href="executive.html" class="btn" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.4); text-decoration: none;" title="Switch to Plain-English Executive Summary">
+                <a href="executive.html" id="exec-view-link" class="btn" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.4); text-decoration: none;" title="Switch to Plain-English Executive Summary">
                     <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                     Executive View 👤
                 </a>
@@ -2003,6 +2002,16 @@
                     return;
                 }
 
+                // Check IndexedDB storage for uploaded file
+                if (window.PatternTimeStorage) {
+                    const stored = await window.PatternTimeStorage.getUpload(filename);
+                    if (stored && stored.content) {
+                        uploadedFilesMap[filename] = stored.content;
+                        processCSVData(stored.content, filename);
+                        return;
+                    }
+                }
+
                 const res = await fetch(`../data/${filename}`);
                 if (!res.ok) throw new Error(`Could not fetch ../data/${filename} (${res.status})`);
                 const text = await res.text();
@@ -2524,12 +2533,12 @@
                 markLines.push({
                     yAxis: bMean,
                     lineStyle: { color: "rgba(148, 163, 184, 0.5)", type: "dotted", width: 1.5 },
-                    label: { formatter: `Pre μ: ${bMean.toFixed(2)}`, position: "start", fontSize: 10, color: "#94a3b8" }
+                    label: { formatter: `Pre μ: ${bMean.toFixed(2)}`, position: "insideStartTop", padding: [0, 4], fontSize: 10, color: "#94a3b8" }
                 });
                 markLines.push({
                     yAxis: aMean,
                     lineStyle: { color: "rgba(244, 63, 94, 0.6)", type: "dotted", width: 1.5 },
-                    label: { formatter: `Post μ: ${aMean.toFixed(2)}`, position: "end", fontSize: 10, color: "#f43f5e" }
+                    label: { formatter: `Post μ: ${aMean.toFixed(2)}`, position: "insideEndTop", padding: [0, 4], fontSize: 10, color: "#f43f5e" }
                 });
 
                 // Regime background area
@@ -2636,7 +2645,7 @@
                         `;
                     }
                 },
-                grid: { left: 55, right: 35, top: 40, bottom: 85 },
+                grid: { left: 65, right: 35, top: 40, bottom: 85, containLabel: true },
                 xAxis: {
                     type: "category",
                     data: timestamps,
@@ -2832,11 +2841,21 @@
         }
 
         // -------------------------------------------------------------
+        function updateExecutiveViewLink() {
+            const execLink = document.getElementById("exec-view-link");
+            if (execLink) {
+                execLink.href = `executive.html?dataset=${encodeURIComponent(currentDatasetName)}`;
+            }
+            if (window.PatternTimeStorage) {
+                window.PatternTimeStorage.setActiveDataset(currentDatasetName);
+            }
+        }
+
         // Event Listeners & Interactive Handlers
         // -------------------------------------------------------------
         datasetSelect.addEventListener("change", e => {
             currentDatasetName = e.target.value;
-            sessionStorage.setItem("patterntime_active_dataset", currentDatasetName);
+            updateExecutiveViewLink();
             loadDataset(currentDatasetName);
         });
 
@@ -2927,27 +2946,23 @@
             reader.onerror = () => {
                 showError(`Failed to read file ${file.name}.`);
             };
-            reader.onload = ev => {
+            reader.onload = async ev => {
                 try {
                     const text = ev.target.result;
                     uploadedFilesMap[file.name] = text;
                     currentDatasetName = file.name;
-                    // Always save lightweight metadata; the raw CSV may exceed the ~5MB
-                    // sessionStorage quota for large files, so we try/catch it gracefully.
-                    try {
-                        sessionStorage.setItem("patterntime_uploaded_text", text);
-                        sessionStorage.setItem("patterntime_uploaded_name", file.name);
-                    } catch (storageErr) {
-                        // QuotaExceededError: file is too large for sessionStorage.
-                        // Data stays available in-memory via uploadedFilesMap — charts
-                        // will work fine this session, but won't survive a page refresh.
-                        console.warn("[PatternTime] sessionStorage quota exceeded for uploaded file; "
-                            + "using in-memory cache only.", storageErr);
-                        sessionStorage.removeItem("patterntime_uploaded_text");
-                        sessionStorage.removeItem("patterntime_uploaded_name");
-                    }
-                    sessionStorage.setItem("patterntime_active_dataset", file.name);
 
+                    // Persist to IndexedDB for unlimited capacity and cross-dashboard access
+                    if (window.PatternTimeStorage) {
+                        await window.PatternTimeStorage.saveUpload(file.name, text);
+                    }
+                    try {
+                        sessionStorage.setItem("patterntime_active_dataset", file.name);
+                    } catch (e) {
+                        // ignore quota issues
+                    }
+
+                    updateExecutiveViewLink();
                     processCSVData(text, file.name);
 
                     // Add to Custom Uploads group
@@ -3786,27 +3801,57 @@
         document.getElementById("prof-search")?.addEventListener("input", renderProfilerTableRows);
         document.getElementById("prof-sort")?.addEventListener("change", renderProfilerTableRows);
 
-        // Initial Load with sessionStorage restore
-        const savedUpName = sessionStorage.getItem("patterntime_uploaded_name");
-        const savedUpText = sessionStorage.getItem("patterntime_uploaded_text");
-        if (savedUpName && savedUpText) {
-            uploadedFilesMap[savedUpName] = savedUpText;
-            const customGroup = document.getElementById("custom-uploads-group");
-            if (customGroup && !Array.from(datasetSelect.options).some(o => o.value === savedUpName)) {
-                const opt = document.createElement("option");
-                opt.value = savedUpName;
-                opt.textContent = `Custom: ${savedUpName}`;
-                customGroup.appendChild(opt);
+        // Initial Load with IndexedDB and URL params restore
+        async function initPageLoad() {
+            if (window.PatternTimeStorage) {
+                try {
+                    const uploads = await window.PatternTimeStorage.getAllUploads();
+                    const customGroup = document.getElementById("custom-uploads-group");
+                    uploads.forEach(u => {
+                        uploadedFilesMap[u.name] = u.content;
+                        if (customGroup && !Array.from(datasetSelect.options).some(o => o.value === u.name)) {
+                            const opt = document.createElement("option");
+                            opt.value = u.name;
+                            opt.textContent = `Custom: ${u.name}`;
+                            customGroup.appendChild(opt);
+                        }
+                    });
+                } catch (e) {
+                    console.warn("Failed to load uploads from storage:", e);
+                }
+            }
+
+            // Check URL param first, then active dataset storage
+            const urlParams = new URLSearchParams(window.location.search);
+            const datasetFromUrl = urlParams.get("dataset");
+            const routeFromUrl = urlParams.get("route");
+            const savedActive = datasetFromUrl || (window.PatternTimeStorage ? window.PatternTimeStorage.getActiveDataset() : null);
+
+            if (savedActive && (Array.from(datasetSelect.options).some(o => o.value === savedActive) || uploadedFilesMap[savedActive])) {
+                currentDatasetName = savedActive;
+            }
+
+            datasetSelect.value = currentDatasetName;
+            updateExecutiveViewLink();
+            await loadDataset(currentDatasetName);
+
+            // If a route parameter was passed (from Executive View Drill Down), apply it
+            if (routeFromUrl) {
+                setTimeout(() => {
+                    const dimSel = document.getElementById("dimension-select");
+                    if (dimSel) {
+                        const targetOpt = Array.from(dimSel.options).find(o => o.value === routeFromUrl);
+                        if (targetOpt) {
+                            dimSel.value = routeFromUrl;
+                            selectedDimension = routeFromUrl;
+                            applyFilterAndRender(currentDatasetName);
+                            showToast(`Filtered by route: ${routeFromUrl}`, "info");
+                        }
+                    }
+                }, 300);
             }
         }
-
-        const savedActive = sessionStorage.getItem("patterntime_active_dataset");
-        if (savedActive && (Array.from(datasetSelect.options).some(o => o.value === savedActive) || uploadedFilesMap[savedActive])) {
-            currentDatasetName = savedActive;
-        }
-
-        datasetSelect.value = currentDatasetName;
-        loadDataset(currentDatasetName);
+        initPageLoad();
     </script>
 </body>
 </html>

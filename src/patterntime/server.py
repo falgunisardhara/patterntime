@@ -51,10 +51,24 @@ class PatternTimeHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
 
-        # Redirect root to visualization workbench
-        if path == "/" or path == "":
+        # Redirect root and convenience paths to visualization pages
+        if path in ("/", ""):
             self.send_response(HTTPStatus.FOUND)
             self.send_header("Location", "/visualization/index.html")
+            self.end_headers()
+            return
+
+        if path in ("/executive", "/executive.html"):
+            query_suffix = f"?{parsed.query}" if parsed.query else ""
+            self.send_response(HTTPStatus.FOUND)
+            self.send_header("Location", f"/visualization/executive.html{query_suffix}")
+            self.end_headers()
+            return
+
+        if path in ("/workbench", "/lab", "/index.html"):
+            query_suffix = f"?{parsed.query}" if parsed.query else ""
+            self.send_response(HTTPStatus.FOUND)
+            self.send_header("Location", f"/visualization/index.html{query_suffix}")
             self.end_headers()
             return
 

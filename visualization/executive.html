@@ -14,7 +14,13 @@
             document.write('<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"><\/script>');
         }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="../node_modules/papaparse/papaparse.min.js"></script>
+    <script>
+        if (typeof Papa === "undefined") {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"><\/script>');
+        }
+    </script>
+    <script src="storage.js"></script>
     <style>
         :root {
             --bg-base:          #070b14;
@@ -230,13 +236,13 @@
         .verdict-recommendation:hover { background:rgba(255,255,255,0.07); }
 
         /* KPI Grid */
-        .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; }
+        .kpi-grid { display:grid; grid-template-columns:repeat(5, 1fr); gap:16px; }
         .kpi-card {
             background:var(--bg-glass); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
             border:1px solid var(--border); border-radius:var(--radius-lg);
-            padding:22px 22px 18px; box-shadow:var(--shadow-xl);
-            transition:var(--transition); display:flex; flex-direction:column; gap:6px;
-            position:relative; overflow:hidden; cursor:default;
+            padding:20px 20px 16px; box-shadow:var(--shadow-xl);
+            transition:var(--transition); display:flex; flex-direction:column; justify-content:space-between;
+            min-height:125px; position:relative; overflow:hidden; cursor:default;
         }
         .kpi-card::before {
             content:''; position:absolute; inset:0;
@@ -244,15 +250,27 @@
             pointer-events:none;
         }
         .kpi-card:hover { border-color:var(--border-hi); transform:translateY(-3px) scale(1.01); box-shadow:var(--shadow-xl),0 0 30px -10px var(--primary-glow); }
-        .kpi-icon { width:36px; height:36px; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; font-size:16px; margin-bottom:8px; }
+        .kpi-icon { width:34px; height:34px; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; font-size:15px; margin-bottom:6px; }
         .icon-health { background:rgba(251,113,133,0.15); border:1px solid rgba(251,113,133,0.25); }
         .icon-speed  { background:rgba(34,211,238,0.12);  border:1px solid rgba(34,211,238,0.25); }
         .icon-impact { background:rgba(251,191,36,0.12);  border:1px solid rgba(251,191,36,0.25); }
         .icon-offend { background:rgba(165,180,252,0.12); border:1px solid rgba(165,180,252,0.25); }
         .icon-cert   { background:rgba(52,211,153,0.12);  border:1px solid rgba(52,211,153,0.25); }
-        .kpi-label { font-size:11px; text-transform:uppercase; letter-spacing:0.6px; color:var(--text-muted); font-weight:600; }
-        .kpi-value { font-family:'Outfit',sans-serif; font-size:30px; font-weight:800; color:var(--text-main); line-height:1.1; letter-spacing:-0.5px; }
-        .kpi-sub { font-size:12px; color:var(--text-subtle); font-weight:500; margin-top:2px; }
+        .kpi-label { font-size:10px; text-transform:uppercase; letter-spacing:0.6px; color:var(--text-muted); font-weight:600; margin-bottom:2px; }
+        .kpi-value { font-family:'Outfit',sans-serif; font-size:26px; font-weight:800; color:var(--text-main); line-height:1.15; letter-spacing:-0.5px; word-break:break-word; overflow:hidden; text-overflow:ellipsis; }
+        .kpi-sub { font-size:11px; color:var(--text-subtle); font-weight:500; margin-top:4px; line-height:1.3; }
+
+        .filter-chip {
+            display:inline-flex; align-items:center; gap:6px;
+            background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.35);
+            color:var(--primary-light); padding:2px 10px; border-radius:9999px;
+            font-size:11px; font-weight:600;
+        }
+        .filter-chip-btn {
+            background:none; border:none; color:var(--text-muted); cursor:pointer;
+            font-size:12px; padding:0 2px; line-height:1; display:flex; align-items:center;
+        }
+        .filter-chip-btn:hover { color:var(--rose); }
 
         /* Chart Section */
         .chart-section {
@@ -320,8 +338,9 @@
             .kpi-value,.verdict-headline { color:#000 !important; }
             .orb, body::before { display:none; }
         }
+        @media (max-width:1200px) { .kpi-grid{grid-template-columns:repeat(3,1fr);} }
         @media (max-width:900px) { .page-wrap{padding:16px 16px 40px;} .verdict-headline{font-size:20px;} .kpi-grid{grid-template-columns:repeat(2,1fr);} }
-        @media (max-width:600px) { .kpi-grid{grid-template-columns:1fr 1fr;} .exec-header{position:static;} }
+        @media (max-width:600px) { .kpi-grid{grid-template-columns:1fr;} .exec-header{position:static;} }
     </style>
 </head>
 <body>
@@ -349,13 +368,19 @@
                 <span id="active-source-label">user_activities.csv</span>
             </div>
             <select id="dataset-select" class="exec-select">
-                <optgroup label="Real-World &amp; Synthetic Scenarios" id="standard-options-group">
+                <optgroup label="Real-World Telemetry" id="realworld-options-group">
                     <option value="user_activities.csv" selected>CakePHP Real Telemetry (9,081 requests)</option>
-                    <option value="change_size_150ms.csv">Major Incident Simulation (+150ms jump)</option>
+                    <option value="custom_test_upload.csv">Server Telemetry (CPU, Memory, Connections)</option>
+                </optgroup>
+                <optgroup label="Synthetic Stress Scenarios" id="standard-options-group">
+                    <option value="sample_api_metrics.csv">Sample API Benchmark (Original)</option>
                     <option value="no_change_metrics.csv">Normal Baseline (Clean &amp; Stable)</option>
-                    <option value="change_size_70ms.csv">Medium Shift (+70ms latency change)</option>
+                    <option value="change_size_30ms.csv">Small Change (+30ms latency shift)</option>
+                    <option value="change_size_70ms.csv">Medium Change (+70ms latency shift)</option>
+                    <option value="change_size_150ms.csv">Major Incident Simulation (+150ms jump)</option>
+                    <option value="scenario_high_noise.csv">High Noise (σ=30ms, +70ms)</option>
+                    <option value="scenario_transient_spikes.csv">Transient Spikes (Outliers)</option>
                     <option value="scenario_gradual_drift.csv">Memory Leak / Gradual Degradation</option>
-                    <option value="sample_api_metrics.csv">Sample API Benchmark</option>
                 </optgroup>
                 <optgroup label="Uploaded Files" id="uploaded-options-group" style="display:none;"></optgroup>
             </select>
@@ -369,7 +394,7 @@
                 Upload CSV
             </button>
             <input type="file" id="exec-file-input" accept=".csv" style="display:none;">
-            <a href="index.html" class="btn btn-lab">
+            <a href="index.html" id="exec-lab-link" class="btn btn-lab">
                 <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0 0h18"/>
                 </svg>
@@ -452,7 +477,13 @@
     <section class="chart-section">
         <div class="chart-header">
             <div>
-                <div class="section-title">&#128202; Performance Timeline</div>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <div class="section-title">&#128202; Performance Timeline</div>
+                    <span id="chart-filter-chip" class="filter-chip" style="display:none;">
+                        <span id="chart-filter-text">Route</span>
+                        <button class="filter-chip-btn" onclick="clearRouteFilter()" title="Clear filter and view all endpoints">✕</button>
+                    </span>
+                </div>
                 <div class="section-subtitle" id="chart-subtitle">Green zone = normal operating period &middot; Red zone = degradation window</div>
             </div>
             <div class="chart-legend">
@@ -517,16 +548,60 @@
 <script>
     let chartInstance = null;
     let currentDatasetName = "user_activities.csv";
+    let currentRawCSV = "";
+    let isCurrentCustom = false;
+    let activeFilteredRoute = null;
     let rawData = [];
     let timeValues = [];
     let metricValues = [];
     let changePointIndex = -1;
+
+    function formatDisplayTime(ts, isShort = false) {
+        if (!ts) return "";
+        const s = String(ts).trim();
+        if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+            const cleanStr = s.replace(/(\d{2}:\d{2}:\d{2})\.\d+/, '$1');
+            const d = new Date(cleanStr.replace(' ', 'T'));
+            if (!isNaN(d.getTime())) {
+                const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                const mon = months[d.getUTCMonth()];
+                const day = d.getUTCDate();
+                const hr = String(d.getUTCHours()).padStart(2, '0');
+                const min = String(d.getUTCMinutes()).padStart(2, '0');
+                const sec = String(d.getUTCSeconds()).padStart(2, '0');
+                if (isShort) {
+                    return `${mon} ${day} ${hr}:${min}`;
+                }
+                return `${mon} ${day}, ${hr}:${min}:${sec} UTC`;
+            }
+        }
+        return s.replace(/\.\d{3,}/, '');
+    }
 
     function initChart() {
         const container = document.getElementById("chart-container");
         if (!container) return;
         chartInstance = echarts.init(container);
         window.addEventListener("resize", () => { if (chartInstance) chartInstance.resize(); });
+    }
+
+    function updateLabLink() {
+        const labLink = document.getElementById("exec-lab-link");
+        if (labLink) {
+            const routeParam = activeFilteredRoute ? `&route=${encodeURIComponent(activeFilteredRoute)}` : "";
+            labLink.href = `index.html?dataset=${encodeURIComponent(currentDatasetName)}${routeParam}`;
+        }
+    }
+
+    function clearRouteFilter() {
+        activeFilteredRoute = null;
+        const filterChip = document.getElementById("chart-filter-chip");
+        if (filterChip) filterChip.style.display = "none";
+        document.getElementById("chart-subtitle").textContent = "Green zone = normal operating period · Red zone = degradation window";
+        updateLabLink();
+        if (currentRawCSV) {
+            processData(currentRawCSV, currentDatasetName, isCurrentCustom);
+        }
     }
 
     function parseCSV(text) {
@@ -556,9 +631,6 @@
     function findMetricColumn(headers, rows) {
         const named = headers.find(h => /execution[_ ]?time|response[_ ]?time|duration|latency|elapsed[_ ]?time/i.test(h));
         if (named) return named;
-        // CSV exports often use generic names (for example, "value" or "col_3").
-        // Pick the numeric column with the most valid values so chart and drill-down
-        // use the same measurement.
         return headers.map(h => ({
             name: h,
             count: rows.reduce((n, row) => n + (row[h] !== "" && Number.isFinite(Number(row[h])) ? 1 : 0), 0)
@@ -583,7 +655,7 @@
         if (!opt) {
             opt = document.createElement("option");
             opt.value = name;
-            opt.textContent = `\uD83D\uDCC1 ${name}`;
+            opt.textContent = `📁 ${name}`;
             upGroup.appendChild(opt);
         }
     }
@@ -614,31 +686,40 @@
         if (vName)  vName.textContent = filename;
         if (vBadge) {
             vBadge.className = isCustom ? "prov-chip custom" : "prov-chip builtin";
-            vBadge.textContent = isCustom ? "Uploaded File \uD83D\uDCE4" : "Built-in Scenario";
+            vBadge.textContent = isCustom ? "Uploaded File 📤" : "Built-in Scenario";
         }
         if (vCount && rowCount !== undefined) vCount.textContent = `${rowCount.toLocaleString()} rows analyzed`;
     }
 
     async function loadDataset(filename) {
         currentDatasetName = filename;
-        sessionStorage.setItem("patterntime_active_dataset", filename);
+        activeFilteredRoute = null;
+        const filterChip = document.getElementById("chart-filter-chip");
+        if (filterChip) filterChip.style.display = "none";
+        updateLabLink();
+
+        if (window.PatternTimeStorage) {
+            window.PatternTimeStorage.setActiveDataset(filename);
+        }
+
+        // 1. Check in-memory uploaded cache
         if (uploadedFiles[filename]) {
             processData(uploadedFiles[filename], filename, true);
             return;
         }
-        const isBuiltIn = Array.from(document.getElementById("dataset-select").options).some(option => option.value === filename);
-        if (!isBuiltIn) {
-            const defaultDataset = document.querySelector('#dataset-select option:not([value=""])')?.value || "user_activities.csv";
-            sessionStorage.removeItem("patterntime_active_dataset");
-            document.getElementById("dataset-select").value = defaultDataset;
-            await loadDataset(defaultDataset);
-            const headline = document.getElementById("verdict-headline");
-            if (headline) {
-                headline.innerHTML = `<span style="color:var(--amber);">&#9888;</span> Uploaded file <strong>${escapeHtml(filename)}</strong> is not available after refresh.<br><small style="opacity:0.8;">The default dataset has been restored. Use <strong>Upload CSV</strong> to load your file again.</small>`;
+
+        // 2. Check IndexedDB storage
+        if (window.PatternTimeStorage) {
+            const stored = await window.PatternTimeStorage.getUpload(filename);
+            if (stored && stored.content) {
+                uploadedFiles[filename] = stored.content;
+                addCustomOption(filename);
+                processData(stored.content, filename, true);
+                return;
             }
-            console.warn(`[PatternTime] Uploaded file "${filename}" was not persisted. Restored the default dataset.`);
-            return;
         }
+
+        // 3. Built-in dataset fetch
         try {
             const res = await fetch(`../data/${filename}`);
             if (!res.ok) throw new Error(`Could not load dataset "${filename}" from the data directory.`);
@@ -652,9 +733,13 @@
     }
 
     function processData(csvText, name, isCustom = false) {
+        currentRawCSV = csvText;
+        isCurrentCustom = isCustom;
         const { headers, rows } = parseCSV(csvText);
         rawData = rows;
-        document.getElementById("chart-subtitle").textContent = "Green zone = normal operating period · Red zone = degradation window";
+        if (!activeFilteredRoute) {
+            document.getElementById("chart-subtitle").textContent = "Green zone = normal operating period · Red zone = degradation window";
+        }
         updateSourceBadges(name, isCustom, rows.length);
         const metricCol = findMetricColumn(headers, rows);
         let tsCol = headers.find(h => /created|timestamp|datetime|date|time/i.test(h));
@@ -697,17 +782,18 @@
         changePointIndex = bestSplit;
         if (maxDelta > 20 && bestSplit !== -1) {
             const pct = beforeMean > 0 ? ((afterMean-beforeMean)/beforeMean)*100 : 0;
-            const splitTime = timeValues[bestSplit] || "Mid-run";
+            const rawSplitTime = timeValues[bestSplit] || "Mid-run";
+            const splitTimeFormatted = formatDisplayTime(rawSplitTime);
             verdictBanner.className="verdict-banner degraded";
             verdictBadge.className="verdict-badge degraded";
-            verdictBadge.innerHTML=`<span class="verdict-badge-dot"></span> \u26A0\uFE0F Performance Slowdown Detected`;
-            verdictTime.textContent=`Incident detected around: ${splitTime}`;
+            verdictBadge.innerHTML=`<span class="verdict-badge-dot"></span> ⚠️ Performance Slowdown Detected`;
+            verdictTime.textContent=`Incident detected around: ${splitTimeFormatted}`;
             verdictHeadline.textContent=`System response time jumped from ${beforeMean.toFixed(0)} ms to ${afterMean.toFixed(0)} ms (+${pct.toFixed(0)}% slower)`;
-            verdictExplanation.innerHTML=`Automated analysis detected a major performance regression starting at <strong>${splitTime}</strong>. Normal operations degraded significantly, increasing customer wait times by <strong>+${(afterMean-beforeMean).toFixed(0)} ms</strong>.`;
-            recText.textContent=`Action Required: Inspect recent software deployments or database query spikes around ${splitTime}`;
+            verdictExplanation.innerHTML=`Automated analysis detected a major performance regression starting at <strong>${splitTimeFormatted}</strong>. Normal operations degraded significantly, increasing customer wait times by <strong>+${(afterMean-beforeMean).toFixed(0)} ms</strong>.`;
+            recText.textContent=`Action Required: Inspect recent software deployments or database query spikes around ${splitTimeFormatted}`;
             kpiHealthVal.textContent="Degraded"; kpiHealthVal.style.color="var(--rose)";
             kpiHealthSub.textContent=`+${pct.toFixed(0)}% latency increase`;
-            kpiHealthIcon.textContent="\uD83D\uDD34";
+            kpiHealthIcon.textContent="🔴";
             kpiBaselineVal.textContent=`${beforeMean.toFixed(0)} ms`;
             kpiImpactVal.textContent=`+${pct.toFixed(1)}%`; kpiImpactVal.style.color="var(--rose)";
             kpiImpactSub.textContent=`+${(afterMean-beforeMean).toFixed(0)} ms latency jump`;
@@ -716,14 +802,14 @@
             const overallMean = metricValues.reduce((s,v)=>s+v,0)/n;
             verdictBanner.className="verdict-banner healthy";
             verdictBadge.className="verdict-badge healthy";
-            verdictBadge.innerHTML=`<span class="verdict-badge-dot"></span> \u2713 System Operating Normally`;
+            verdictBadge.innerHTML=`<span class="verdict-badge-dot"></span> ✓ System Operating Normally`;
             verdictTime.textContent="Continuous health check verified";
             verdictHeadline.textContent=`All systems operating smoothly at ~${overallMean.toFixed(0)} ms average latency`;
             verdictExplanation.textContent="No statistically significant slowdowns, spikes, or regressions were detected across this dataset. All requests completed within expected baseline SLA tolerances.";
             recText.textContent="No remediation needed. System performance conforms to reliability guidelines.";
             kpiHealthVal.textContent="Healthy"; kpiHealthVal.style.color="var(--emerald)";
             kpiHealthSub.textContent="No regressions detected";
-            kpiHealthIcon.textContent="\uD83D\uDFE2";
+            kpiHealthIcon.textContent="🟢";
             kpiBaselineVal.textContent=`${overallMean.toFixed(0)} ms`;
             kpiImpactVal.textContent="0.0%"; kpiImpactVal.style.color="var(--emerald)";
             kpiImpactSub.textContent="Steady regime throughout";
@@ -741,11 +827,11 @@
         const markAreaObj = (splitSampledIdx > 0 && splitSampledIdx < sampledTimes.length) ? {
             silent: true,
             data: [
-                [{ name:'\u2705 Normal Period', xAxis:sampledTimes[0], itemStyle:{color:'rgba(52,211,153,0.07)'}, label:{color:'#34d399',position:'insideTopLeft',offset:[14,14],fontSize:11,fontWeight:'bold',fontFamily:'Inter'} },{ xAxis:sampledTimes[splitSampledIdx] }],
-                [{ name:'\uD83D\uDEA8 Degraded Period', xAxis:sampledTimes[splitSampledIdx], itemStyle:{color:'rgba(251,113,133,0.07)'}, label:{color:'#fb7185',position:'insideTopRight',offset:[-14,14],fontSize:11,fontWeight:'bold',fontFamily:'Inter'} },{ xAxis:sampledTimes[sampledTimes.length-1] }]
+                [{ name:'✅ Normal Period', xAxis:sampledTimes[0], itemStyle:{color:'rgba(52,211,153,0.07)'}, label:{color:'#34d399',position:'insideTopLeft',offset:[14,14],fontSize:11,fontWeight:'bold',fontFamily:'Inter'} },{ xAxis:sampledTimes[splitSampledIdx] }],
+                [{ name:'🚨 Degraded Period', xAxis:sampledTimes[splitSampledIdx], itemStyle:{color:'rgba(251,113,133,0.07)'}, label:{color:'#fb7185',position:'insideTopRight',offset:[-14,14],fontSize:11,fontWeight:'bold',fontFamily:'Inter'} },{ xAxis:sampledTimes[sampledTimes.length-1] }]
             ]
         } : null;
-        const markLineObj = splitSampledIdx > 0 ? { symbol:['none','none'], data:[{ xAxis:sampledTimes[splitSampledIdx], lineStyle:{color:'#fb7185',type:'dashed',width:1.5}, label:{formatter:'\uD83D\uDEA8 Change Point',position:'middle',color:'#fb7185',fontWeight:'bold',fontSize:11,fontFamily:'Inter',backgroundColor:'rgba(11,15,20,0.9)',padding:[4,10],borderRadius:6,borderWidth:1,borderColor:'rgba(251,113,133,0.4)'} }] } : null;
+        const markLineObj = splitSampledIdx > 0 ? { symbol:['none','none'], data:[{ xAxis:sampledTimes[splitSampledIdx], lineStyle:{color:'#fb7185',type:'dashed',width:1.5}, label:{formatter:'🚨 Change Point',position:'middle',color:'#fb7185',fontWeight:'bold',fontSize:11,fontFamily:'Inter',backgroundColor:'rgba(11,15,20,0.9)',padding:[4,10],borderRadius:6,borderWidth:1,borderColor:'rgba(251,113,133,0.4)'} }] } : null;
         const option = {
             backgroundColor:'transparent',
             animation:true, animationDuration:800, animationEasing:'cubicOut',
@@ -759,11 +845,24 @@
                     const item=params[0]; const val=item.value; const time=item.name;
                     const avg=metricValues.reduce((a,b)=>a+b,0)/metricValues.length;
                     const color=val>avg*1.3?'#fb7185':'#22d3ee';
-                    return `<div style="font-family:'Inter',sans-serif;padding:2px 4px;"><div style="color:#8b9ab0;font-size:11px;margin-bottom:5px;">\u23F1 ${time}</div><div style="font-size:18px;font-weight:800;color:${color};font-family:'Outfit',sans-serif;">${val.toFixed(1)} ms</div></div>`;
+                    return `<div style="font-family:'Inter',sans-serif;padding:2px 4px;"><div style="color:#8b9ab0;font-size:11px;margin-bottom:5px;">⏱ ${formatDisplayTime(time)}</div><div style="font-size:18px;font-weight:800;color:${color};font-family:'Outfit',sans-serif;">${val.toFixed(1)} ms</div></div>`;
                 }
             },
             grid:{top:30,bottom:30,left:60,right:40,containLabel:true},
-            xAxis:{type:'category',data:sampledTimes,axisLine:{lineStyle:{color:'rgba(255,255,255,0.08)'}},axisTick:{show:false},axisLabel:{color:'#536073',fontSize:11,fontFamily:'Inter',maxInterval:100},splitLine:{show:false}},
+            xAxis:{
+                type:'category',
+                data:sampledTimes,
+                axisLine:{lineStyle:{color:'rgba(255,255,255,0.08)'}},
+                axisTick:{show:false},
+                axisLabel:{
+                    color:'#536073',
+                    fontSize:11,
+                    fontFamily:'Inter',
+                    maxInterval:100,
+                    formatter: val => formatDisplayTime(val, true)
+                },
+                splitLine:{show:false}
+            },
             yAxis:{type:'value',name:'Response Time (ms)',nameTextStyle:{color:'#536073',fontSize:11,fontFamily:'Inter'},splitLine:{lineStyle:{color:'rgba(255,255,255,0.05)',type:'dashed'}},axisLabel:{color:'#536073',fontFamily:'JetBrains Mono',fontSize:11},axisLine:{show:false},axisTick:{show:false}},
             series:[{
                 name:'Response Time',type:'line',data:sampledValues,smooth:0.4,showSymbol:false,
@@ -786,7 +885,7 @@
         const statusCol=headers.find(h=>/status_code|status|http/i.test(h));
         if (!dimCol) {
             tableBody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted);">This dataset does not contain individual API route columns.</td></tr>`;
-            if(kpiOffenderVal){kpiOffenderVal.textContent="Entire System";kpiOffenderSub.textContent="Single-series telemetry";}
+            if(kpiOffenderVal){kpiOffenderVal.textContent="Entire System";kpiOffenderVal.title="Single-series telemetry";kpiOffenderSub.textContent="Single-series telemetry";}
             return;
         }
         const routeStats={};
@@ -809,20 +908,26 @@
         routeList.forEach(r=>{
             const latencyRatio=r.hasLatency&&baselineP95>0?r.p95/baselineP95:1;
             if (!r.hasLatency && !r.hasStatus) {
-                r.risk="unknown";r.riskLabel="\u25CF No health data";r.pillClass="pill-unknown";
+                r.risk="unknown";r.riskLabel="● No health data";r.pillClass="pill-unknown";
             } else if (r.errRate>=5 || (r.hasLatency && latencyRatio>=2)) {
-                r.risk="critical";r.riskLabel="\u25CF High Risk";r.pillClass="pill-critical";
+                r.risk="critical";r.riskLabel="● High Risk";r.pillClass="pill-critical";
             } else if (r.errRate>0 || (r.hasLatency && latencyRatio>=1.5)) {
-                r.risk="warning";r.riskLabel="\u25CF Needs Attention";r.pillClass="pill-warning";
+                r.risk="warning";r.riskLabel="● Needs Attention";r.pillClass="pill-warning";
             } else {
-                r.risk="healthy";r.riskLabel="\u25CF Healthy";r.pillClass="pill-healthy";
+                r.risk="healthy";r.riskLabel="● Healthy";r.pillClass="pill-healthy";
             }
         });
         const riskRank={critical:3,warning:2,healthy:1,unknown:0};
         routeList.sort((a,b)=>{const rDiff=riskRank[b.risk]-riskRank[a.risk];return rDiff!==0?rDiff:b.p95-a.p95;});
         if(routeCountBadge) routeCountBadge.textContent=`${routeList.length} endpoints monitored`;
-        const worstRoute=routeList.find(r=>r.risk==="critical")||routeList[0];
-        if(worstRoute&&kpiOffenderVal){kpiOffenderVal.textContent=worstRoute.name;kpiOffenderSub.textContent=worstRoute.hasLatency?`Worst Case (p95): ${worstRoute.p95.toFixed(0)} ms`:`${worstRoute.riskLabel.replace(/^\u25CF /,"")} · ${worstRoute.count.toLocaleString()} requests`;}
+        
+        // Prioritize substantial offenders over 1-off sample tests
+        const worstRoute=routeList.find(r=>r.risk==="critical" && r.count>=3)||routeList.find(r=>r.risk==="critical")||routeList[0];
+        if(worstRoute&&kpiOffenderVal){
+            kpiOffenderVal.textContent=worstRoute.name;
+            kpiOffenderVal.title=worstRoute.name;
+            kpiOffenderSub.textContent=worstRoute.hasLatency?`p95: ${worstRoute.p95.toFixed(0)} ms (${worstRoute.count.toLocaleString()} reqs)`:`${worstRoute.riskLabel.replace(/^● /,"")} · ${worstRoute.count.toLocaleString()} requests`;
+        }
         tableBody.innerHTML="";
         routeList.slice(0,15).forEach(r=>{
             const tr=document.createElement("tr");
@@ -833,7 +938,7 @@
                 <td style="color:var(--primary-light);font-weight:700;font-family:'JetBrains Mono',monospace;font-size:12px;">${r.hasLatency?`${r.p95.toFixed(1)} ms`:"N/A"}</td>
                 <td style="color:${r.errRate>0?'var(--rose)':'var(--emerald)'};font-weight:600;">${r.errRate.toFixed(1)}%</td>
                 <td><span class="status-pill ${r.pillClass}">${r.riskLabel}</span></td>
-                <td style="text-align:right;"><button class="btn btn-lab" data-route="${escapeHtml(r.name)}" style="padding:5px 12px;font-size:11px;">Drill Down &#x1F50D;</button></td>`;
+                <td style="text-align:right;"><button class="btn btn-lab" data-route="${escapeHtml(r.name)}" style="padding:5px 12px;font-size:11px;">Drill Down 🔍</button></td>`;
             tableBody.appendChild(tr);
         });
     }
@@ -848,61 +953,97 @@
     });
 
     function filterByRoute(routeName) {
+        if (!rawData || !rawData.length) return;
         const headers=Object.keys(rawData[0]||{});
         const dimCol=findRouteColumn(headers);
         const metricCol=findLatencyColumn(headers);
         const tsCol=headers.find(h=>/created|timestamp|datetime|date|time/i.test(h));
         if(!dimCol || !metricCol) return;
+        activeFilteredRoute = routeName;
         const routeRows=rawData.filter(r=>r[dimCol]===routeName);
         metricValues=[]; timeValues=[];
         routeRows.forEach((r,i)=>{const val=parseFloat(r[metricCol]);if(!isNaN(val)){metricValues.push(val);timeValues.push(tsCol&&r[tsCol]?r[tsCol]:`#${i+1}`);}});
+        
+        const filterChip = document.getElementById("chart-filter-chip");
+        const filterText = document.getElementById("chart-filter-text");
+        if (filterChip && filterText) {
+            filterText.textContent = `Route: ${routeName}`;
+            filterChip.style.display = "inline-flex";
+        }
         document.getElementById("chart-subtitle").innerHTML=`Showing timeline for: <strong style="color:var(--primary-light);">${escapeHtml(routeName)}</strong> (${routeRows.length.toLocaleString()} requests)`;
+        updateLabLink();
         analyzeExecutiveImpact(routeRows,metricCol,tsCol);
         renderExecutiveChart();
         document.querySelector(".chart-section").scrollIntoView({behavior:'smooth'});
     }
 
-    document.getElementById("dataset-select").addEventListener("change",e=>loadDataset(e.target.value));
+    document.getElementById("dataset-select").addEventListener("change", e => loadDataset(e.target.value));
 
-    const execFileInput=document.getElementById("exec-file-input");
-    if(execFileInput){
-        execFileInput.addEventListener("change",e=>{
-            if(!e.target.files.length) return;
-            const file=e.target.files[0];
-            const reader=new FileReader();
-            reader.onload=ev=>{
-                const text=ev.target.result;
-                uploadedFiles[file.name]=text;
-                try{
-                    sessionStorage.setItem("patterntime_uploaded_text",text);
-                    sessionStorage.setItem("patterntime_uploaded_name",file.name);
-                }catch(storageErr){
-                    console.warn("[PatternTime] sessionStorage quota exceeded; using in-memory cache only.",storageErr);
-                    sessionStorage.removeItem("patterntime_uploaded_text");
-                    sessionStorage.removeItem("patterntime_uploaded_name");
+    const execFileInput = document.getElementById("exec-file-input");
+    if (execFileInput) {
+        execFileInput.addEventListener("change", e => {
+            if (!e.target.files.length) return;
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = async ev => {
+                const text = ev.target.result;
+                uploadedFiles[file.name] = text;
+                if (window.PatternTimeStorage) {
+                    await window.PatternTimeStorage.saveUpload(file.name, text);
                 }
-                sessionStorage.setItem("patterntime_active_dataset",file.name);
+                try {
+                    sessionStorage.setItem("patterntime_active_dataset", file.name);
+                } catch (storageErr) {
+                    // Ignore quota errors
+                }
                 addCustomOption(file.name);
-                document.getElementById("dataset-select").value=file.name;
+                document.getElementById("dataset-select").value = file.name;
                 loadDataset(file.name);
             };
             reader.readAsText(file);
         });
     }
 
-    const savedUpName=sessionStorage.getItem("patterntime_uploaded_name");
-    const savedUpText=sessionStorage.getItem("patterntime_uploaded_text");
-    if(savedUpName&&savedUpText){uploadedFiles[savedUpName]=savedUpText;addCustomOption(savedUpName);}
+    async function initExecutivePage() {
+        initChart();
 
-    const savedActive=sessionStorage.getItem("patterntime_active_dataset");
-    if(savedActive){
-        currentDatasetName=savedActive;
-        const opt=Array.from(document.getElementById("dataset-select").options).find(o=>o.value===savedActive);
-        if(opt) document.getElementById("dataset-select").value=savedActive;
+        // 1. Restore uploads from IndexedDB
+        if (window.PatternTimeStorage) {
+            try {
+                const storedUploads = await window.PatternTimeStorage.getAllUploads();
+                storedUploads.forEach(u => {
+                    uploadedFiles[u.name] = u.content;
+                    addCustomOption(u.name);
+                });
+            } catch (err) {
+                console.warn("[PatternTime] Could not restore uploads from IndexedDB:", err);
+            }
+        }
+
+        // 2. Synchronize active dataset from URL params or storage
+        const urlParams = new URLSearchParams(window.location.search);
+        const datasetFromUrl = urlParams.get("dataset");
+        const routeFromUrl = urlParams.get("route");
+        const savedActive = datasetFromUrl || (window.PatternTimeStorage ? window.PatternTimeStorage.getActiveDataset() : null);
+
+        if (savedActive) {
+            currentDatasetName = savedActive;
+            addCustomOption(savedActive);
+            const opt = Array.from(document.getElementById("dataset-select").options).find(o => o.value === savedActive);
+            if (opt) document.getElementById("dataset-select").value = savedActive;
+        }
+
+        await loadDataset(currentDatasetName);
+
+        // 3. Auto-filter route if passed from URL query
+        if (routeFromUrl) {
+            setTimeout(() => {
+                filterByRoute(routeFromUrl);
+            }, 300);
+        }
     }
 
-    initChart();
-    loadDataset(currentDatasetName);
+    initExecutivePage();
 </script>
 </body>
 </html>
