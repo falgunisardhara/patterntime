@@ -34,6 +34,7 @@ def test_parse_telemetry_payload_formats():
     p1 = {
         "dataset": "gateway.csv",
         "service": "api-gateway",
+        "application": "my-laravel-app",
         "mode": "overwrite",
         "detect": True,
         "records": [{"timestamp": "2026-11-01 10:00:00", "latency": 50}],
@@ -44,6 +45,8 @@ def test_parse_telemetry_payload_formats():
     assert opts1["service"] == "api-gateway"
     assert opts1["mode"] == "overwrite"
     assert opts1["detect"] is True
+    assert opts1["application"] == "my-laravel-app"
+    assert "application" not in recs1[0]
 
     # Format 2: Raw list
     p2 = [
@@ -96,13 +99,14 @@ def test_validate_and_prepare_records():
         validate_and_prepare_records(text_only)
 
 
-def test_ingest_telemetry_batch_append_and_slice(tmp_path):
+def test_ingest_telemetry_batch_append_and_slice(tmp_path, memory_storage):
     """Test file creation, appending with column alignment, and slicing."""
     data_dir = tmp_path / "data"
 
     # Batch 1: Initial creation
     batch1 = {
         "dataset": "test_app.csv",
+        "application": "my-laravel-app",
         "service": "checkout",
         "records": [
             {"timestamp": "2026-11-01 10:00:00", "route": "/pay", "duration_ms": 150.0},
@@ -110,7 +114,12 @@ def test_ingest_telemetry_batch_append_and_slice(tmp_path):
         ],
     }
 
-    res1 = ingest_telemetry_batch(batch1, data_dir=data_dir)
+    res1 = ingest_telemetry_batch(batch1, data_dir=data_dir, storage=memory_storage)
+    # Verify application metadata was saved in the database
+    db_record = memory_storage.get_dataset("test_app.csv")
+
+    assert db_record is not None
+    assert db_record["application"] == "my-laravel-app"
     assert res1["status"] == "success"
     assert res1["dataset"] == "test_app.csv"
     assert res1["records_ingested"] == 2

@@ -84,6 +84,7 @@ def parse_telemetry_payload(
         "algorithm": "ewma",
         "metric": None,
         "service": None,
+        "application": None,
     }
 
     if payload is None:
@@ -114,13 +115,20 @@ def parse_telemetry_payload(
             options["algorithm"] = str(payload.get("algorithm", "ewma")).lower()
             options["metric"] = payload.get("metric")
             options["service"] = payload.get("service")
+            options["application"] = payload.get("application")
             return dataset_name, records, options
 
         # Single record dictionary
         if any(key in payload for key in COMMON_TIMESTAMP_NAMES) or any(
             isinstance(v, (int, float)) for v in payload.values()
         ):
-            records = [payload]
+            options["application"] = payload.get("application")
+            record = {
+                key: value
+                for key, value in payload.items()
+                if key not in ("application", "dataset")
+            }
+            records = [record]
             dataset_name = sanitize_dataset_name(payload.get("dataset"))
             return dataset_name, records, options
 
@@ -253,6 +261,7 @@ def ingest_telemetry_batch(
                 cadence=cadence,
                 timestamp_col=timestamp_col,
                 metric_cols=metric_cols,
+                application=options.get("application"),
             )
         except Exception:
             # MySQL persistence failure should not block successful telemetry ingestion
