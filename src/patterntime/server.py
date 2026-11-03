@@ -210,10 +210,50 @@ class PatternTimeHandler(SimpleHTTPRequestHandler):
                 self._send_json({"error": str(err)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
             return
 
+        if path == "/api/telemetry":
+            try:
+                from patterntime.telemetry import get_telemetry_slice, list_telemetry_datasets
+
+                data_dir = Path(self.directory) / "data" if hasattr(self, "directory") and self.directory else Path("data")
+                ds_name = query.get("dataset", [None])[0]
+                if ds_name:
+                    limit = int(query.get("limit", [50])[0])
+                    offset = int(query.get("offset", [0])[0])
+                    route_filter = query.get("route", [None])[0]
+                    result = get_telemetry_slice(
+                        dataset_name=ds_name,
+                        data_dir=data_dir,
+                        limit=limit,
+                        offset=offset,
+                        route_filter=route_filter,
+                    )
+                    self._send_json(result)
+                else:
+                    datasets = list_telemetry_datasets(data_dir=data_dir)
+                    self._send_json({"datasets": datasets})
+            except FileNotFoundError as fnf:
+                self._send_json({"error": str(fnf)}, status=HTTPStatus.NOT_FOUND)
+            except Exception as err:
+                self._send_json({"error": str(err)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+
         self._send_json({"error": "API route not found"}, status=HTTPStatus.NOT_FOUND)
 
-    def _handle_api_post(self, path: str, data: dict[str, Any]) -> None:
+    def _handle_api_post(self, path: str, data: Any) -> None:
         storage = DatabaseStorage()
+
+        if path == "/api/telemetry":
+            try:
+                from patterntime.telemetry import ingest_telemetry_batch
+
+                data_dir = Path(self.directory) / "data" if hasattr(self, "directory") and self.directory else Path("data")
+                result = ingest_telemetry_batch(payload=data, data_dir=data_dir, storage=storage)
+                self._send_json(result, status=HTTPStatus.CREATED)
+            except ValueError as val_err:
+                self._send_json({"error": str(val_err)}, status=HTTPStatus.BAD_REQUEST)
+            except Exception as err:
+                self._send_json({"error": str(err)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
 
         if path == "/api/runs":
             try:
@@ -294,3 +334,13 @@ def run_server(host: str = "0.0.0.0", port: int = 8089) -> None:
     except KeyboardInterrupt:
         print("\nStopping PatternTime Server...")
         server.server_close()
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Start PatternTime Server")
+    parser.add_argument("--port", type=int, default=8089, help="Port to listen on (default: 8089)")
+    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host interface (default: 0.0.0.0)")
+    cli_args = parser.parse_args()
+    run_server(host=cli_args.host, port=cli_args.port)
+

@@ -126,3 +126,46 @@ def test_cli_profile_json(capsys):
     assert "endpoints" in data
     assert "regressed_endpoints" in data
     assert data["total_requests"] == 9081
+
+
+def test_cli_ingest(tmp_path, capsys):
+    """Test CLI ingest subcommand."""
+    json_file = tmp_path / "telemetry_input.json"
+    target_data_dir = tmp_path / "data"
+
+    payload = [
+        {"timestamp": "2026-11-01 10:00:00", "duration_ms": 120.0, "route": "/api/users"},
+        {"timestamp": "2026-11-01 10:00:05", "duration_ms": 125.0, "route": "/api/users"},
+    ]
+    json_file.write_text(json.dumps(payload), encoding="utf-8")
+
+    code = main([
+        "ingest",
+        str(json_file),
+        "--dataset",
+        "cli_ingest_test.csv",
+        "--data-dir",
+        str(target_data_dir),
+    ])
+    assert code == 0
+    captured = capsys.readouterr()
+    assert "Telemetry Ingested Successfully" in captured.out
+    assert "cli_ingest_test.csv" in captured.out
+    assert "Records Ingested: 2" in captured.out
+
+    # Test with --json flag
+    code = main([
+        "ingest",
+        str(json_file),
+        "--dataset",
+        "cli_ingest_test.csv",
+        "--data-dir",
+        str(target_data_dir),
+        "--json",
+    ])
+    assert code == 0
+    captured = capsys.readouterr()
+    res = json.loads(captured.out)
+    assert res["status"] == "success"
+    assert res["total_rows"] == 4
+

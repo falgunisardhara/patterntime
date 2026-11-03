@@ -166,6 +166,26 @@ def build_parser() -> argparse.ArgumentParser:
     gate_parser.add_argument("--quiet", action="store_true", help="Suppress non-error stdout (only exit code)")
 
     # -----------------------------------------------------------------------
+    # Ingest command (Telemetry Ingestion)
+    # -----------------------------------------------------------------------
+    ingest_parser = subparsers.add_parser("ingest", help="Ingest a JSON batch of telemetry records")
+    ingest_parser.add_argument("payload_path", type=str, help="Path to JSON file with telemetry batch (or '-' for stdin)")
+    ingest_parser.add_argument("--dataset", type=str, default=None, help="Target CSV dataset name (e.g. api_metrics.csv)")
+    ingest_parser.add_argument("--service", type=str, default=None, help="Service name or tag")
+    ingest_parser.add_argument("--mode", type=str, default="append", choices=["append", "overwrite"], help="Write mode (default: append)")
+    ingest_parser.add_argument("--detect", action="store_true", help="Automatically run change detection on ingested data")
+    ingest_parser.add_argument(
+        "--algorithm",
+        type=str,
+        default="ewma",
+        choices=["sliding_window", "cusum", "robust_cusum", "ewma"],
+        help="Algorithm for automatic detection (default: ewma)",
+    )
+    ingest_parser.add_argument("--metric", type=str, default=None, help="Metric column to analyze if --detect is specified")
+    ingest_parser.add_argument("--data-dir", type=str, default="data", help="Target datasets directory (default: data)")
+    ingest_parser.add_argument("--json", action="store_true", help="Output ingestion summary as JSON")
+
+    # -----------------------------------------------------------------------
     # Serve command (local API and UI server)
     # -----------------------------------------------------------------------
     serve_parser = subparsers.add_parser("serve", help="Start local API and static web server")
@@ -605,6 +625,82 @@ def handle_gate(args: argparse.Namespace) -> int:
     return 0 if report.passed else 1
 
 
+def handle_ingest(args: argparse.Namespace) -> int:
+    """Ingest a batch of telemetry records from a file or stdin."""
+    from patterntime.storage import DatabaseStorage
+    from patterntime.telemetry import ingest_telemetry_batch
+
+    try:
+        if args.payload_path == "-":
+            raw_text = sys.stdin.read()
+        else:
+            file_path = Path(args.payload_path)
+            if not file_path.is_file():
+                print(f"[ERROR] Telemetry file not found: {args.payload_path}", file=sys.stderr)
+                return 1
+            raw_text = file_path.read_text(encoding="utf-8")
+
+        payload = json.loads(raw_text)
+    except Exception as err:
+        print(f"[ERROR] Failed to load JSON payload: {err}", file=sys.stderr)
+        return 1
+
+    # Apply CLI argument overrides to payload if specified
+    if isinstance(payload, dict):
+        if args.dataset:
+            payload["dataset"] = args.dataset
+        if args.service:
+            payload["service"] = args.service
+        if args.mode:
+            payload["mode"] = args.mode
+        if args.detect:
+            payload["detect"] = True
+        if args.algorithm:
+            payload["algorithm"] = args.algorithm
+        if args.metric:
+            payload["metric"] = args.metric
+    elif isinstance(payload, list) and (args.dataset or args.service or args.detect or args.mode != "append"):
+        payload = {
+            "records": payload,
+            "dataset": args.dataset or "api_telemetry.csv",
+            "service": args.service,
+            "mode": args.mode,
+            "detect": args.detect,
+            "algorithm": args.algorithm,
+            "metric": args.metric,
+        }
+
+    try:
+        storage = DatabaseStorage(auto_create_tables=False)
+    except Exception:
+        storage = None
+
+    try:
+        res = ingest_telemetry_batch(payload=payload, data_dir=args.data_dir, storage=storage)
+        if args.json:
+            print(json.dumps(res, indent=2))
+        else:
+            print(f"=== Telemetry Ingested Successfully ===")
+            print(f"  Dataset:          {res['dataset']}")
+            print(f"  Records Ingested: {res['records_ingested']}")
+            print(f"  Total Rows:       {res['total_rows']}")
+            print(f"  Metrics:          {', '.join(res['metrics'])}")
+            print(f"  Timestamp Col:    {res['timestamp_col']}")
+            if res.get("cadence"):
+                print(f"  Cadence:          {res['cadence']}")
+            if "detection" in res:
+                det = res["detection"]
+                print(f"\n=== Automatic Change Detection ({det['algorithm'].upper()}) ===")
+                print(f"  Metric:           {det['metric']}")
+                print(f"  Events Found:     {det['events_count']}")
+                if "severity" in det:
+                    print(f"  Shift Severity:   {det['severity'].upper()}")
+        return 0
+    except Exception as err:
+        print(f"[ERROR] Ingestion failed: {err}", file=sys.stderr)
+        return 1
+
+
 def handle_serve(args: argparse.Namespace) -> int:
     """Start local API and UI server."""
     from patterntime.server import run_server
@@ -639,6 +735,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return handle_profile(args)
     if args.subcommand == "gate":
         return handle_gate(args)
+    if args.subcommand == "ingest":
+        return handle_ingest(args)
     if args.subcommand == "serve":
         return handle_serve(args)
 

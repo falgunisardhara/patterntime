@@ -46,6 +46,14 @@ from patterntime.storage import (
     ImpactReportModel,
     get_db_url,
 )
+from patterntime.telemetry import (
+    get_telemetry_slice,
+    ingest_telemetry_batch,
+    list_telemetry_datasets,
+    parse_telemetry_payload,
+    sanitize_dataset_name,
+    validate_and_prepare_records,
+)
 from patterntime.validator import (
     DuplicateTimestampError,
     EmptyDataError,
@@ -117,4 +125,11 @@ __all__ = [
     "GateCheckResult",
     "GateReport",
     "evaluate_gate",
+    # Telemetry Ingestion API
+    "ingest_telemetry_batch",
+    "get_telemetry_slice",
+    "list_telemetry_datasets",
+    "parse_telemetry_payload",
+    "validate_and_prepare_records",
+    "sanitize_dataset_name",
 ]
