@@ -85,6 +85,7 @@ def parse_telemetry_payload(
         "metric": None,
         "service": None,
         "application": None,
+        "environment": None,
     }
 
     if payload is None:
@@ -116,6 +117,7 @@ def parse_telemetry_payload(
             options["metric"] = payload.get("metric")
             options["service"] = payload.get("service")
             options["application"] = payload.get("application")
+            options["environment"] = payload.get("environment")
             return dataset_name, records, options
 
         # Single record dictionary
@@ -123,10 +125,11 @@ def parse_telemetry_payload(
             isinstance(v, (int, float)) for v in payload.values()
         ):
             options["application"] = payload.get("application")
+            options["environment"] = payload.get("environment")
             record = {
                 key: value
                 for key, value in payload.items()
-                if key not in ("application", "dataset")
+                if key not in ("application", "environment", "dataset")
             }
             records = [record]
             dataset_name = sanitize_dataset_name(payload.get("dataset"))
@@ -262,6 +265,7 @@ def ingest_telemetry_batch(
                 timestamp_col=timestamp_col,
                 metric_cols=metric_cols,
                 application=options.get("application"),
+                environment=options.get("environment"),
             )
         except Exception:
             # MySQL persistence failure should not block successful telemetry ingestion

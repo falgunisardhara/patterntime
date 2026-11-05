@@ -83,6 +83,7 @@ class DatasetModel(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255), unique=True, nullable=False, index=True)
     application = Column(String(255), nullable=True, index=True)
+    environment = Column(String(100), nullable=True, index=True)
     row_count = Column(Integer, nullable=False, default=0)
     cadence = Column(String(64), nullable=True)
     timestamp_col = Column(String(128), nullable=True)
@@ -101,6 +102,7 @@ class DatasetModel(Base):
             "id": self.id,
             "name": self.name,
             "application": self.application,
+            "environment": self.environment,
             "row_count": self.row_count,
             "cadence": self.cadence,
             "timestamp_col": self.timestamp_col,
@@ -253,6 +255,7 @@ class DatabaseStorage:
         timestamp_col: str | None = None,
         metric_cols: list[str] | None = None,
         application: str | None = None,
+        environment: str | None = None,
     ) -> int:
         """Register or update dataset metadata in the database."""
         with self.session_factory() as session:
@@ -264,6 +267,8 @@ class DatabaseStorage:
             dataset.row_count = row_count
             if application is not None:
                 dataset.application = application
+            if environment is not None:
+                dataset.environment = environment
             dataset.cadence = cadence
             dataset.timestamp_col = timestamp_col
             dataset.metric_cols = json.dumps(metric_cols or [])

@@ -63,6 +63,7 @@ def test_save_and_get_dataset(memory_storage):
         timestamp_col="created",
         metric_cols=["execution_time", "status_code"],
         application="my-laravel-app",
+        environment="staging",
     )
     assert isinstance(ds_id, int)
     assert ds_id > 0
@@ -72,6 +73,7 @@ def test_save_and_get_dataset(memory_storage):
     assert record["id"] == ds_id
     assert record["name"] == "user_activities.csv"
     assert record["application"] == "my-laravel-app"
+    assert record["environment"] == "staging"
     assert record["row_count"] == 9081
     assert record["cadence"] == "1286s"
     assert record["timestamp_col"] == "created"
@@ -89,6 +91,7 @@ def test_save_and_get_dataset(memory_storage):
     updated = memory_storage.get_dataset(ds_id)
     assert updated["row_count"] == 9200
     assert updated["application"] == "my-laravel-app"
+    assert updated["environment"] == "staging"
 
 
 def test_list_datasets(memory_storage):

@@ -35,6 +35,7 @@ def test_parse_telemetry_payload_formats():
         "dataset": "gateway.csv",
         "service": "api-gateway",
         "application": "my-laravel-app",
+        "environment": "staging",
         "mode": "overwrite",
         "detect": True,
         "records": [{"timestamp": "2026-11-01 10:00:00", "latency": 50}],
@@ -47,6 +48,8 @@ def test_parse_telemetry_payload_formats():
     assert opts1["detect"] is True
     assert opts1["application"] == "my-laravel-app"
     assert "application" not in recs1[0]
+    assert opts1["environment"] == "staging"
+    assert "environment" not in recs1[0]
 
     # Format 2: Raw list
     p2 = [
@@ -59,10 +62,16 @@ def test_parse_telemetry_payload_formats():
     assert opts2["mode"] == "append"
 
     # Format 3: Single record
-    p3 = {"timestamp": "2026-11-01 10:00:00", "latency": 50}
-    ds3, recs3, _ = parse_telemetry_payload(p3)
+    p3 = {
+        "timestamp": "2026-11-01 10:00:00",
+        "latency": 50,
+        "environment": "staging",
+    }
+    ds3, recs3, opts3 = parse_telemetry_payload(p3)
     assert ds3 == "api_telemetry.csv"
     assert len(recs3) == 1
+    assert opts3["environment"] == "staging"
+    assert "environment" not in recs3[0]
 
     # Empty payload errors
     with pytest.raises(ValueError, match="cannot be empty"):
@@ -107,6 +116,7 @@ def test_ingest_telemetry_batch_append_and_slice(tmp_path, memory_storage):
     batch1 = {
         "dataset": "test_app.csv",
         "application": "my-laravel-app",
+        "environment": "staging",
         "service": "checkout",
         "records": [
             {"timestamp": "2026-11-01 10:00:00", "route": "/pay", "duration_ms": 150.0},
@@ -120,6 +130,7 @@ def test_ingest_telemetry_batch_append_and_slice(tmp_path, memory_storage):
 
     assert db_record is not None
     assert db_record["application"] == "my-laravel-app"
+    assert db_record["environment"] == "staging"
     assert res1["status"] == "success"
     assert res1["dataset"] == "test_app.csv"
     assert res1["records_ingested"] == 2
@@ -136,6 +147,8 @@ def test_ingest_telemetry_batch_append_and_slice(tmp_path, memory_storage):
     res2 = ingest_telemetry_batch(batch2, data_dir=data_dir)
     assert res2["records_ingested"] == 2
     assert res2["total_rows"] == 4
+    updated_record = memory_storage.get_dataset("test_app.csv")
+    assert updated_record["environment"] == "staging"
 
     # Test get_telemetry_slice
     slice_all = get_telemetry_slice("test_app.csv", data_dir=data_dir, limit=10)
