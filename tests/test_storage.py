@@ -93,6 +93,64 @@ def test_save_and_get_dataset(memory_storage):
     assert updated["application"] == "my-laravel-app"
     assert updated["environment"] == "staging"
 
+    # Same filename, different environment should create a separate dataset
+    production_id = memory_storage.save_dataset(
+        name="user_activities.csv",
+        row_count=5000,
+        application="my-laravel-app",
+        environment="production",
+    )
+
+    assert production_id != ds_id
+
+    production = memory_storage.get_dataset(production_id)
+    assert production["name"] == "user_activities.csv"
+    assert production["application"] == "my-laravel-app"
+    assert production["environment"] == "production"
+    assert production["row_count"] == 5000
+
+    # Same filename and environment, different application
+    payment_id = memory_storage.save_dataset(
+        name="user_activities.csv",
+        row_count=3000,
+        application="payment-service",
+        environment="production",
+    )
+
+    assert payment_id != ds_id
+    assert payment_id != production_id
+
+    payment = memory_storage.get_dataset(payment_id)
+    assert payment["application"] == "payment-service"
+    assert payment["environment"] == "production"
+    assert payment["row_count"] == 3000
+
+    # Test retrieving datasets by filename and metadata
+    staging_record = memory_storage.get_dataset(
+        "user_activities.csv",
+        application="my-laravel-app",
+        environment="staging",
+    )
+    assert staging_record["id"] == ds_id
+
+    production_record = memory_storage.get_dataset(
+        "user_activities.csv",
+        application="my-laravel-app",
+        environment="production",
+    )
+    assert production_record["id"] == production_id
+
+    payment_record = memory_storage.get_dataset(
+        "user_activities.csv",
+        application="payment-service",
+        environment="production",
+    )
+    assert payment_record["id"] == payment_id
+
+    # Test that filename-only lookup raises an error when ambiguous
+    with pytest.raises(ValueError, match="Ambiguous dataset name"):
+        memory_storage.get_dataset("user_activities.csv")
+
 
 def test_list_datasets(memory_storage):
     """Test listing all registered datasets."""
@@ -159,6 +217,52 @@ def test_save_run_with_detection_result(memory_storage):
     assert "2026-09-16" in ev0["event_timestamp"]
     assert ev0["score"] == 459.3
     assert ev0["details"]["shift"] == 272.07
+
+def test_save_run_with_application_environment(memory_storage):
+    """Test associating detection runs with the correct dataset identity."""
+
+    # Register the same filename in two environments
+    staging_id = memory_storage.save_dataset(
+        name="gateway.csv",
+        row_count=100,
+        application="my-laravel-app",
+        environment="staging",
+    )
+
+    production_id = memory_storage.save_dataset(
+        name="gateway.csv",
+        row_count=200,
+        application="my-laravel-app",
+        environment="production",
+    )
+
+    result = DetectionResult(
+        events=[],
+        algorithm_name="ewma",
+    )
+
+    # Metadata should associate the run with production
+    run_id = memory_storage.save_run(
+        dataset_name="gateway.csv",
+        metric_name="response_time",
+        detection_result=result,
+        application="my-laravel-app",
+        environment="production",
+    )
+
+    run = memory_storage.get_run(run_id)
+
+    assert run is not None
+    assert run["dataset_id"] == production_id
+    assert run["dataset_id"] != staging_id
+
+    # Without metadata, the filename is ambiguous
+    with pytest.raises(ValueError, match="Ambiguous dataset identity"):
+        memory_storage.save_run(
+            dataset_name="gateway.csv",
+            metric_name="response_time",
+            detection_result=result,
+        )
 
 
 def test_save_run_with_impact_report(memory_storage):

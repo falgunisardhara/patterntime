@@ -62,6 +62,8 @@ def build_parser() -> argparse.ArgumentParser:
     det_parser = subparsers.add_parser("detect", help="Run change point detection on a CSV file")
     det_parser.add_argument("csv_path", type=str, help="Path to the telemetry CSV file")
     det_parser.add_argument("--metric", type=str, default=None, help="Metric column to analyze")
+    det_parser.add_argument("--application", type=str, default=None, help="Application associated with this dataset")
+    det_parser.add_argument("--environment", type=str, default=None, help="Environment associated with this dataset")
     det_parser.add_argument(
         "--algorithm",
         type=str,
@@ -352,6 +354,8 @@ def handle_detect(args: argparse.Namespace) -> int:
                 cadence=val.inferred_frequency,
                 timestamp_col=val.timestamp_col,
                 metric_cols=val.metric_cols,
+                application=args.application,
+                environment=args.environment,
             )
             first_report = impact_reports[0] if impact_reports else None
             run_id = storage.save_run(

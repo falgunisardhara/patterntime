@@ -289,6 +289,8 @@ class PatternTimeHandler(SimpleHTTPRequestHandler):
                     row_count=row_count,
                     timestamp_col=data.get("timestamp_col"),
                     metric_cols=data.get("metric_cols", [metric_name]),
+                    application=data.get("application"),
+                    environment=data.get("environment"),
                 )
 
                 run_id = storage.save_run(

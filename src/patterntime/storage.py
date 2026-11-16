@@ -24,6 +24,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    UniqueConstraint,
     Text,
     create_engine,
     desc,
@@ -79,9 +80,17 @@ class DatasetModel(Base):
     """Metadata registry of ingested telemetry datasets."""
 
     __tablename__ = "datasets"
+    __table_args__ = (
+        UniqueConstraint(
+            "name",
+            "application",
+            "environment",
+            name="uq_dataset_identity",
+        ),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(255), unique=True, nullable=False, index=True)
+    name = Column(String(255), nullable=False, index=True)
     application = Column(String(255), nullable=True, index=True)
     environment = Column(String(100), nullable=True, index=True)
     row_count = Column(Integer, nullable=False, default=0)
@@ -259,8 +268,30 @@ class DatabaseStorage:
     ) -> int:
         """Register or update dataset metadata in the database."""
         with self.session_factory() as session:
-            dataset = session.query(DatasetModel).filter_by(name=name).first()
-            if not dataset:
+            query = session.query(DatasetModel).filter_by(name=name)
+            candidates = query.all()
+
+            if application is not None:
+                candidates = [
+                    ds for ds in candidates
+                    if ds.application == application
+                ]
+
+            if environment is not None:
+                candidates = [
+                    ds for ds in candidates
+                    if ds.environment == environment
+                ]
+
+            if len(candidates) > 1:
+                raise ValueError(
+                    f"Ambiguous dataset identity for '{name}'. "
+                    "Please provide application and environment."
+                )
+
+            dataset = candidates[0] if candidates else None
+
+            if dataset is None:
                 dataset = DatasetModel(name=name)
                 session.add(dataset)
 
@@ -277,13 +308,42 @@ class DatabaseStorage:
             session.commit()
             return dataset.id
 
-    def get_dataset(self, name_or_id: str | int) -> dict[str, Any] | None:
+    def get_dataset(
+        self,
+        name_or_id: str | int,
+        application: str | None = None,
+        environment: str | None = None,
+    ) -> dict[str, Any] | None:
         """Retrieve dataset details by id or name."""
         with self.session_factory() as session:
             if isinstance(name_or_id, int):
                 dataset = session.get(DatasetModel, name_or_id)
             else:
-                dataset = session.query(DatasetModel).filter_by(name=str(name_or_id)).first()
+                candidates = (
+                    session.query(DatasetModel)
+                    .filter_by(name=str(name_or_id))
+                    .all()
+                )
+
+                if application is not None:
+                    candidates = [
+                        ds for ds in candidates
+                        if ds.application == application
+                    ]
+
+                if environment is not None:
+                    candidates = [
+                        ds for ds in candidates
+                        if ds.environment == environment
+                    ]
+
+                if len(candidates) > 1:
+                    raise ValueError(
+                        f"Ambiguous dataset name '{name_or_id}'. "
+                        "Please provide application and environment."
+                    )
+
+                dataset = candidates[0] if candidates else None
 
             return dataset.to_dict() if dataset else None
 
@@ -303,16 +363,41 @@ class DatabaseStorage:
         detection_result: Any,
         impact_report: Any | None = None,
         dataset_id: int | None = None,
+        application: str | None = None,
+        environment: str | None = None,
     ) -> int:
         """
         Persist a detection run along with its change events and optional impact report.
         """
         with self.session_factory() as session:
-            # If dataset_id not passed, find or create dataset record
+            # Resolve dataset identity if dataset_id is not provided
             if dataset_id is None:
-                ds = session.query(DatasetModel).filter_by(name=dataset_name).first()
-                if ds:
-                    dataset_id = ds.id
+                candidates = (
+                    session.query(DatasetModel)
+                    .filter_by(name=dataset_name)
+                    .all()
+                )
+
+                if application is not None:
+                    candidates = [
+                        ds for ds in candidates
+                        if ds.application == application
+                    ]
+
+                if environment is not None:
+                    candidates = [
+                        ds for ds in candidates
+                        if ds.environment == environment
+                    ]
+
+                if len(candidates) > 1:
+                    raise ValueError(
+                        f"Ambiguous dataset identity for '{dataset_name}'. "
+                        "Please provide dataset_id or application and environment."
+                    )
+
+                if candidates:
+                    dataset_id = candidates[0].id
 
             # Create run record
             run = DetectionRunModel(
