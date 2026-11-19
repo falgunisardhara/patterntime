@@ -347,10 +347,19 @@ class DatabaseStorage:
 
             return dataset.to_dict() if dataset else None
 
-    def list_datasets(self) -> list[dict[str, Any]]:
-        """List all registered datasets."""
+    def list_datasets(
+        self,
+        application: str | None = None,
+        environment: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """List registered datasets, optionally filtered by application and/or environment."""
         with self.session_factory() as session:
-            records = session.query(DatasetModel).order_by(desc(DatasetModel.updated_at)).all()
+            query = session.query(DatasetModel)
+            if application is not None:
+                query = query.filter_by(application=application)
+            if environment is not None:
+                query = query.filter_by(environment=environment)
+            records = query.order_by(desc(DatasetModel.updated_at)).all()
             return [r.to_dict() for r in records]
 
     # -----------------------------------------------------------------------

@@ -98,6 +98,18 @@ def build_parser() -> argparse.ArgumentParser:
     ds_parser = subparsers.add_parser("datasets", help="Inspect datasets in MySQL")
     ds_sub = ds_parser.add_subparsers(dest="ds_action", help="Datasets action")
     list_ds_parser = ds_sub.add_parser("list", help="List all registered datasets")
+    list_ds_parser.add_argument(
+        "--application",
+        type=str,
+        default=None,
+        help="Filter datasets by application name",
+    )
+    list_ds_parser.add_argument(
+        "--environment",
+        type=str,
+        default=None,
+        help="Filter datasets by environment name",
+    )
     list_ds_parser.add_argument("--json", action="store_true", help="Output as JSON")
 
     # -----------------------------------------------------------------------
@@ -472,7 +484,10 @@ def handle_datasets(args: argparse.Namespace) -> int:
     storage = DatabaseStorage(auto_create_tables=False)
 
     if action == "list":
-        datasets = storage.list_datasets()
+        datasets = storage.list_datasets(
+            application=args.application,
+            environment=args.environment,
+        )
         if args.json:
             print(json.dumps(datasets, indent=2))
             return 0
@@ -481,11 +496,23 @@ def handle_datasets(args: argparse.Namespace) -> int:
             print("No registered datasets found in database.")
             return 0
 
-        print(f"{'ID':<6} {'NAME':<28} {'ROWS':<8} {'CADENCE':<10} {'TIMESTAMP COL':<16} {'METRICS'}")
+        print(
+            f"{'ID':<6} {'NAME':<28} {'APPLICATION':<22} "
+            f"{'ENVIRONMENT':<14} {'ROWS':<8} {'CADENCE':<10} "
+            f"{'TIMESTAMP COL':<16} {'METRICS'}"
+        )
         print("-" * 90)
         for d in datasets:
             metrics_str = ", ".join(d.get("metric_cols", []))
-            print(f"{d['id']:<6} {d['name']:<28} {d['row_count']:<8} {str(d.get('cadence') or '-'):<10} {str(d.get('timestamp_col') or '-'):<16} {metrics_str}")
+            print(
+                f"{d['id']:<6} {d['name']:<28} "
+                f"{str(d.get('application') or '-'):<22} "
+                f"{str(d.get('environment') or '-'):<14} "
+                f"{d['row_count']:<8} "
+                f"{str(d.get('cadence') or '-'):<10} "
+                f"{str(d.get('timestamp_col') or '-'):<16} "
+                f"{metrics_str}"
+            )
         return 0
 
     return 0

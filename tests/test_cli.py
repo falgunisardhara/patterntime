@@ -107,6 +107,78 @@ def test_cli_detect_and_runs(capsys, monkeypatch, tmp_path):
     assert "sample_api_metrics.csv" in captured.out
 
 
+def test_cli_datasets_list_filters(capsys, monkeypatch, tmp_path):
+    """Test datasets list filtering by application and environment, including JSON."""
+    from patterntime.storage import DatabaseStorage
+
+    test_db = f"sqlite:///{tmp_path / 'datasets_filter.db'}"
+    monkeypatch.setenv("DATABASE_URL", test_db)
+    main(["db", "init"])
+    capsys.readouterr()
+
+    # Seed datasets directly so the test isolates list-filter behavior
+    storage = DatabaseStorage(db_url=test_db, auto_create_tables=True)
+    storage.save_dataset(
+        name="dataset_a.csv",
+        row_count=100,
+        application="my-laravel-app",
+        environment="staging",
+    )
+    storage.save_dataset(
+        name="dataset_b.csv",
+        row_count=200,
+        application="payment-service",
+        environment="production",
+    )
+
+    # No filters
+    code = main(["datasets", "list", "--json"])
+    assert code == 0
+    all_datasets = json.loads(capsys.readouterr().out)
+    assert len(all_datasets) == 2
+
+    # Application filter
+    code = main(["datasets", "list", "--application", "my-laravel-app", "--json"])
+    assert code == 0
+    by_app = json.loads(capsys.readouterr().out)
+    assert len(by_app) == 1
+    assert by_app[0]["application"] == "my-laravel-app"
+    assert by_app[0]["environment"] == "staging"
+
+    # Environment filter
+    code = main(["datasets", "list", "--environment", "production", "--json"])
+    assert code == 0
+    by_env = json.loads(capsys.readouterr().out)
+    assert len(by_env) == 1
+    assert by_env[0]["name"] == "dataset_b.csv"
+
+    # Both filters
+    code = main([
+        "datasets", "list",
+        "--application", "payment-service",
+        "--environment", "production",
+        "--json",
+    ])
+    assert code == 0
+    by_both = json.loads(capsys.readouterr().out)
+    assert len(by_both) == 1
+    assert by_both[0]["application"] == "payment-service"
+
+    # No matching datasets
+    code = main(["datasets", "list", "--application", "missing-app", "--json"])
+    assert code == 0
+    assert json.loads(capsys.readouterr().out) == []
+
+    # Table output still shows application and environment columns
+    code = main(["datasets", "list", "--application", "my-laravel-app"])
+    assert code == 0
+    table_out = capsys.readouterr().out
+    assert "APPLICATION" in table_out
+    assert "ENVIRONMENT" in table_out
+    assert "my-laravel-app" in table_out
+    assert "staging" in table_out
+
+
 def test_cli_profile(capsys):
     """Test CLI profile subcommand on user_activities.csv."""
     code = main(["profile", "data/user_activities.csv", "--min-samples", "50"])

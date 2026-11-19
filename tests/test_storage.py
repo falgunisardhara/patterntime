@@ -153,15 +153,62 @@ def test_save_and_get_dataset(memory_storage):
 
 
 def test_list_datasets(memory_storage):
-    """Test listing all registered datasets."""
-    memory_storage.save_dataset(name="dataset_a.csv", row_count=100)
-    memory_storage.save_dataset(name="dataset_b.csv", row_count=200)
+    """Test listing datasets with and without application/environment filters."""
+    memory_storage.save_dataset(
+        name="dataset_a.csv",
+        row_count=100,
+        application="my-laravel-app",
+        environment="staging",
+    )
+    memory_storage.save_dataset(
+        name="dataset_b.csv",
+        row_count=200,
+        application="my-laravel-app",
+        environment="production",
+    )
+    memory_storage.save_dataset(
+        name="dataset_c.csv",
+        row_count=300,
+        application="payment-service",
+        environment="production",
+    )
 
+    # No filters: return all datasets
     datasets = memory_storage.list_datasets()
-    assert len(datasets) == 2
+    assert len(datasets) == 3
     names = [d["name"] for d in datasets]
     assert "dataset_a.csv" in names
     assert "dataset_b.csv" in names
+    assert "dataset_c.csv" in names
+
+    # Application filter
+    by_app = memory_storage.list_datasets(application="my-laravel-app")
+    assert len(by_app) == 2
+    assert {d["name"] for d in by_app} == {"dataset_a.csv", "dataset_b.csv"}
+    assert all(d["application"] == "my-laravel-app" for d in by_app)
+
+    # Environment filter
+    by_env = memory_storage.list_datasets(environment="production")
+    assert len(by_env) == 2
+    assert {d["name"] for d in by_env} == {"dataset_b.csv", "dataset_c.csv"}
+    assert all(d["environment"] == "production" for d in by_env)
+
+    # Both filters together
+    by_both = memory_storage.list_datasets(
+        application="my-laravel-app",
+        environment="production",
+    )
+    assert len(by_both) == 1
+    assert by_both[0]["name"] == "dataset_b.csv"
+    assert by_both[0]["application"] == "my-laravel-app"
+    assert by_both[0]["environment"] == "production"
+
+    # No matching datasets
+    no_match = memory_storage.list_datasets(
+        application="nonexistent-app",
+        environment="staging",
+    )
+    assert no_match == []
 
 
 def test_save_run_with_detection_result(memory_storage):
