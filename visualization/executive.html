@@ -170,6 +170,30 @@
         }
         .btn-upload { background:rgba(52,211,153,0.12); color:var(--emerald); border:1px solid rgba(52,211,153,0.35); }
         .btn-upload:hover { background:rgba(52,211,153,0.22); border-color:var(--emerald); transform:translateY(-1px); box-shadow:0 4px 16px rgba(52,211,153,0.2); }
+        .btn-upload:disabled { opacity:0.55; cursor:wait; transform:none; box-shadow:none; }
+
+        .exec-loading-overlay {
+            position:fixed; inset:0; z-index:9999;
+            display:none; align-items:center; justify-content:center;
+            background:rgba(7,11,20,0.72); backdrop-filter:blur(4px);
+        }
+        .exec-loading-overlay.visible { display:flex; }
+        .exec-loading-card {
+            display:flex; flex-direction:column; align-items:center; gap:14px;
+            padding:28px 36px; border-radius:var(--radius-lg);
+            background:var(--bg-card); border:1px solid var(--border-hi);
+            box-shadow:var(--shadow-xl); min-width:220px;
+        }
+        .exec-loading-spinner {
+            width:34px; height:34px; border-radius:50%;
+            border:3px solid rgba(99,102,241,0.2);
+            border-top-color:var(--primary-light);
+            animation:exec-spin 0.7s linear infinite;
+        }
+        .exec-loading-text {
+            color:var(--text-main); font-size:13px; font-weight:600; letter-spacing:0.01em;
+        }
+        @keyframes exec-spin { to { transform:rotate(360deg); } }
         .btn-lab { background:rgba(99,102,241,0.12); color:var(--primary-light); border:1px solid rgba(99,102,241,0.35); }
         .btn-lab:hover { background:rgba(99,102,241,0.22); border-color:var(--primary-light); transform:translateY(-1px); box-shadow:var(--shadow-glow); }
         .btn-ghost { background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border); }
@@ -411,6 +435,13 @@
         </div>
     </header>
 
+    <div class="exec-loading-overlay" id="exec-loading-overlay" aria-live="polite" aria-busy="false">
+        <div class="exec-loading-card">
+            <div class="exec-loading-spinner" aria-hidden="true"></div>
+            <div class="exec-loading-text" id="exec-loading-text">Loading dataset…</div>
+        </div>
+    </div>
+
     <section class="verdict-banner degraded" id="hero-verdict-banner">
         <div class="verdict-top">
             <span class="verdict-badge degraded" id="verdict-badge">
@@ -604,25 +635,58 @@
         }
     }
 
-    function parseCSV(text) {
-        const parsed = Papa.parse(text, { skipEmptyLines: true });
-        if (!parsed.data || parsed.data.length < 2) throw new Error("Dataset has fewer than 2 rows.");
-        const rawRow0 = parsed.data[0];
-        const looksLikeData = !isNaN(Number(rawRow0[0])) || rawRow0.some(c => /^\d{4}-\d{2}-\d{2}/.test(String(c).trim()));
-        let headers = [], dataRows = [];
-        if (looksLikeData && rawRow0.length === 16) {
-            headers = ["id","user_id","api_name","action","client","request_params","response","status_code","url","ip","os","browser","extra","log_type","execution_time","created"];
-            dataRows = parsed.data;
-        } else if (looksLikeData) {
-            headers = Array.from({ length: rawRow0.length }, (_, i) => `col_${i}`);
-            dataRows = parsed.data;
-        } else {
-            headers = rawRow0.map(h => String(h || "").trim().replace(/^["']|["']$/g, ''));
-            dataRows = parsed.data.slice(1);
+    function setExecLoading(isLoading, message) {
+        const overlay = document.getElementById("exec-loading-overlay");
+        const label = document.getElementById("exec-loading-text");
+        const uploadBtn = document.getElementById("exec-upload-btn");
+        if (label && message) label.textContent = message;
+        if (overlay) {
+            overlay.classList.toggle("visible", !!isLoading);
+            overlay.setAttribute("aria-busy", isLoading ? "true" : "false");
         }
-        const rows = dataRows.map(r => {
+        if (uploadBtn) uploadBtn.disabled = !!isLoading;
+    }
+
+    function parseCSV(text) {
+        // Peek at the first row only so we can choose the cheapest full parse path.
+        const preview = Papa.parse(text, { preview: 1, skipEmptyLines: true });
+        if (!preview.data || !preview.data.length) throw new Error("Dataset has fewer than 2 rows.");
+        const rawRow0 = preview.data[0];
+        const looksLikeData = !isNaN(Number(rawRow0[0])) || rawRow0.some(c => /^\d{4}-\d{2}-\d{2}/.test(String(c).trim()));
+
+        if (looksLikeData && rawRow0.length === 16) {
+            const parsed = Papa.parse(text, { skipEmptyLines: true });
+            if (!parsed.data || parsed.data.length < 2) throw new Error("Dataset has fewer than 2 rows.");
+            const headers = ["id","user_id","api_name","action","client","request_params","response","status_code","url","ip","os","browser","extra","log_type","execution_time","created"];
+            const rows = parsed.data.map(r => {
+                const obj = {};
+                headers.forEach((h, idx) => { obj[h] = r[idx] !== undefined ? String(r[idx]).trim() : ""; });
+                return obj;
+            });
+            return { headers, rows };
+        }
+
+        if (looksLikeData) {
+            const parsed = Papa.parse(text, { skipEmptyLines: true });
+            if (!parsed.data || parsed.data.length < 2) throw new Error("Dataset has fewer than 2 rows.");
+            const headers = Array.from({ length: rawRow0.length }, (_, i) => `col_${i}`);
+            const rows = parsed.data.map(r => {
+                const obj = {};
+                headers.forEach((h, idx) => { obj[h] = r[idx] !== undefined ? String(r[idx]).trim() : ""; });
+                return obj;
+            });
+            return { headers, rows };
+        }
+
+        // Fast path for normal headered CSVs (most uploads).
+        const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+        const headers = (parsed.meta.fields || []).map(h => String(h || "").trim().replace(/^["']|["']$/g, ''));
+        if (!headers.length || !parsed.data || parsed.data.length < 1) {
+            throw new Error("Dataset has fewer than 2 rows.");
+        }
+        const rows = parsed.data.map(r => {
             const obj = {};
-            headers.forEach((h, idx) => { obj[h] = r[idx] !== undefined ? String(r[idx]).trim() : ""; });
+            headers.forEach(h => { obj[h] = r[h] != null ? String(r[h]).trim() : ""; });
             return obj;
         });
         return { headers, rows };
@@ -631,9 +695,11 @@
     function findMetricColumn(headers, rows) {
         const named = headers.find(h => /execution[_ ]?time|response[_ ]?time|duration|latency|elapsed[_ ]?time/i.test(h));
         if (named) return named;
+        // Sample only — scanning every row for every column freezes large uploads.
+        const sample = rows.length > 250 ? rows.slice(0, 250) : rows;
         return headers.map(h => ({
             name: h,
-            count: rows.reduce((n, row) => n + (row[h] !== "" && Number.isFinite(Number(row[h])) ? 1 : 0), 0)
+            count: sample.reduce((n, row) => n + (row[h] !== "" && Number.isFinite(Number(row[h])) ? 1 : 0), 0)
         })).filter(col => col.count > 0).sort((a, b) => b.count - a.count)[0]?.name || null;
     }
 
@@ -702,33 +768,36 @@
             window.PatternTimeStorage.setActiveDataset(filename);
         }
 
-        // 1. Check in-memory uploaded cache
-        if (uploadedFiles[filename]) {
-            processData(uploadedFiles[filename], filename, true);
-            return;
-        }
-
-        // 2. Check IndexedDB storage
-        if (window.PatternTimeStorage) {
-            const stored = await window.PatternTimeStorage.getUpload(filename);
-            if (stored && stored.content) {
-                uploadedFiles[filename] = stored.content;
-                addCustomOption(filename);
-                processData(stored.content, filename, true);
+        setExecLoading(true, `Loading ${filename}…`);
+        try {
+            // 1. Check in-memory uploaded cache
+            if (uploadedFiles[filename]) {
+                await processDataAsync(uploadedFiles[filename], filename, true);
                 return;
             }
-        }
 
-        // 3. Built-in dataset fetch
-        try {
+            // 2. Check IndexedDB storage (load only the selected file)
+            if (window.PatternTimeStorage) {
+                const stored = await window.PatternTimeStorage.getUpload(filename);
+                if (stored && stored.content) {
+                    uploadedFiles[filename] = stored.content;
+                    addCustomOption(filename);
+                    await processDataAsync(stored.content, filename, true);
+                    return;
+                }
+            }
+
+            // 3. Built-in dataset fetch
             const res = await fetch(`../data/${filename}`);
             if (!res.ok) throw new Error(`Could not load dataset "${filename}" from the data directory.`);
             const text = await res.text();
-            processData(text, filename, false);
+            await processDataAsync(text, filename, false);
         } catch (err) {
             console.error("Load failed:", err);
             const headline = document.getElementById("verdict-headline");
             if (headline) headline.innerHTML = `<span style="color:var(--rose);">&#10007;</span> Error loading dataset.<br><small style="opacity:0.8;">${err.message}</small>`;
+        } finally {
+            setExecLoading(false);
         }
     }
 
@@ -751,6 +820,20 @@
         analyzeExecutiveImpact(rows, metricCol, tsCol);
         renderExecutiveChart();
         renderRoutesTable(rows, headers);
+    }
+
+    function processDataAsync(csvText, name, isCustom = false) {
+        // Yield once so the loading overlay can paint before heavy CSV work.
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                try {
+                    processData(csvText, name, isCustom);
+                    resolve();
+                } catch (err) {
+                    reject(err);
+                }
+            }, 0);
+        });
     }
 
     function analyzeExecutiveImpact(rows, metricCol, tsCol) {
@@ -832,9 +915,14 @@
             ]
         } : null;
         const markLineObj = splitSampledIdx > 0 ? { symbol:['none','none'], data:[{ xAxis:sampledTimes[splitSampledIdx], lineStyle:{color:'#fb7185',type:'dashed',width:1.5}, label:{formatter:'🚨 Change Point',position:'middle',color:'#fb7185',fontWeight:'bold',fontSize:11,fontFamily:'Inter',backgroundColor:'rgba(11,15,20,0.9)',padding:[4,10],borderRadius:6,borderWidth:1,borderColor:'rgba(251,113,133,0.4)'} }] } : null;
+        const seriesAvg = metricValues.length
+            ? metricValues.reduce((a, b) => a + b, 0) / metricValues.length
+            : 0;
         const option = {
             backgroundColor:'transparent',
-            animation:true, animationDuration:800, animationEasing:'cubicOut',
+            animation: metricValues.length < 2000,
+            animationDuration: metricValues.length < 2000 ? 500 : 0,
+            animationEasing:'cubicOut',
             tooltip:{
                 trigger:'axis',
                 backgroundColor:'rgba(13,17,32,0.96)',
@@ -843,8 +931,7 @@
                 textStyle:{color:'#f1f5f9',fontSize:13,fontFamily:'Inter'},
                 formatter:function(params){
                     const item=params[0]; const val=item.value; const time=item.name;
-                    const avg=metricValues.reduce((a,b)=>a+b,0)/metricValues.length;
-                    const color=val>avg*1.3?'#fb7185':'#22d3ee';
+                    const color=val>seriesAvg*1.3?'#fb7185':'#22d3ee';
                     return `<div style="font-family:'Inter',sans-serif;padding:2px 4px;"><div style="color:#8b9ab0;font-size:11px;margin-bottom:5px;">⏱ ${formatDisplayTime(time)}</div><div style="font-size:18px;font-weight:800;color:${color};font-family:'Outfit',sans-serif;">${val.toFixed(1)} ms</div></div>`;
                 }
             },
@@ -985,38 +1072,66 @@
             if (!e.target.files.length) return;
             const file = e.target.files[0];
             const reader = new FileReader();
-            reader.onload = async ev => {
+            reader.onerror = () => {
+                setExecLoading(false);
+                const headline = document.getElementById("verdict-headline");
+                if (headline) {
+                    headline.innerHTML = `<span style="color:var(--rose);">&#10007;</span> Failed to read uploaded file.`;
+                }
+            };
+            reader.onload = ev => {
                 const text = ev.target.result;
                 uploadedFiles[file.name] = text;
-                if (window.PatternTimeStorage) {
-                    await window.PatternTimeStorage.saveUpload(file.name, text);
-                }
-                try {
-                    sessionStorage.setItem("patterntime_active_dataset", file.name);
-                } catch (storageErr) {
-                    // Ignore quota errors
-                }
                 addCustomOption(file.name);
                 document.getElementById("dataset-select").value = file.name;
-                loadDataset(file.name);
+                currentDatasetName = file.name;
+                activeFilteredRoute = null;
+                const filterChip = document.getElementById("chart-filter-chip");
+                if (filterChip) filterChip.style.display = "none";
+                updateLabLink();
+
+                // Persist in the background — never block the UI on IndexedDB writes.
+                if (window.PatternTimeStorage) {
+                    window.PatternTimeStorage.setActiveDataset(file.name);
+                    window.PatternTimeStorage.saveUpload(file.name, text).catch(err => {
+                        console.warn("[PatternTime] Background upload save failed:", err);
+                    });
+                } else {
+                    try {
+                        sessionStorage.setItem("patterntime_active_dataset", file.name);
+                    } catch (storageErr) {
+                        // Ignore quota errors
+                    }
+                }
+
+                setExecLoading(true, `Analyzing ${file.name}…`);
+                processDataAsync(text, file.name, true)
+                    .catch(err => {
+                        console.error("Upload processing failed:", err);
+                        const headline = document.getElementById("verdict-headline");
+                        if (headline) {
+                            headline.innerHTML = `<span style="color:var(--rose);">&#10007;</span> Error processing upload.<br><small style="opacity:0.8;">${err.message}</small>`;
+                        }
+                    })
+                    .finally(() => setExecLoading(false));
             };
+            setExecLoading(true, `Reading ${file.name}…`);
             reader.readAsText(file);
+            // Allow re-uploading the same filename later.
+            e.target.value = "";
         });
     }
 
     async function initExecutivePage() {
         initChart();
 
-        // 1. Restore uploads from IndexedDB
+        // 1. Restore upload names only (do not preload large CSV blobs into memory).
         if (window.PatternTimeStorage) {
             try {
-                const storedUploads = await window.PatternTimeStorage.getAllUploads();
-                storedUploads.forEach(u => {
-                    uploadedFiles[u.name] = u.content;
-                    addCustomOption(u.name);
-                });
+                const uploadNames = await window.PatternTimeStorage.listUploadNames();
+                uploadNames.forEach(name => addCustomOption(name));
             } catch (err) {
-                console.warn("[PatternTime] Could not restore uploads from IndexedDB:", err);
+                console.warn("[PatternTime] Could not restore upload names from IndexedDB:", err);
             }
         }
 

@@ -94,7 +94,7 @@
         },
 
         /**
-         * List all uploaded files
+         * List all uploaded files (includes full CSV content — prefer listUploadNames for UI init).
          */
         async getAllUploads() {
             try {
@@ -110,6 +110,27 @@
                 }
             } catch (err) {
                 console.warn('[PatternTimeStorage] IndexedDB getAll failed:', err);
+            }
+            return [];
+        },
+
+        /**
+         * List upload names only (avoids loading large CSV blobs into memory on page init).
+         */
+        async listUploadNames() {
+            try {
+                const db = await getDB();
+                if (db) {
+                    return await new Promise((resolve, reject) => {
+                        const tx = db.transaction(STORE_UPLOADS, 'readonly');
+                        const store = tx.objectStore(STORE_UPLOADS);
+                        const req = store.getAllKeys();
+                        req.onsuccess = () => resolve(req.result || []);
+                        req.onerror = (e) => reject(e.target.error);
+                    });
+                }
+            } catch (err) {
+                console.warn('[PatternTimeStorage] IndexedDB listUploadNames failed:', err);
             }
             return [];
         },
